@@ -3,35 +3,36 @@ import websocket
 import json
 import socket
 
-
-def on_message(ws, message):
-    values = json.loads(message)['values']
-    x = values[0]
-    y = values[1]
-    z = values[2]
-    print("x = ", x , "y = ", y , "z = ", z )
-
-def on_error(ws, error):
-    print("error occurred ", error)
-    
-def on_close(ws, close_code, reason):
-    print("connection closed : ", reason)
-    
-def on_open(ws):
-    print("connected")
-    
-
-def connect(url):
-    ws = websocket.WebSocketApp(url,
-                              on_open=on_open,
-                              on_message=on_message,
-                              on_error=on_error,
-                              on_close=on_close)
-
-    ws.run_forever()
- 
-
 class MyServiceListener(ServiceListener):
+
+    def __init__(self, sensor: str) -> None:
+        super().__init__()
+        self.sensor = sensor
+
+    def on_message(self, ws, message):
+        values = json.loads(message)['values']
+        x = values[0]
+        y = values[1]
+        z = values[2]
+        print("x = ", x , "y = ", y , "z = ", z )
+
+    def on_error(self, ws, error):
+        print("error occurred ", error)
+        
+    def on_close(self, ws, close_code, reason):
+        print("connection closed : ", reason)
+        
+    def on_open(self, ws):
+        print("connected")
+        
+
+    def connect(self, url):
+        ws = websocket.WebSocketApp(url,
+                                on_open=self.on_open,
+                                on_message=self.on_message,
+                                on_error=self.on_error,
+                                on_close=self.on_close)
+        ws.run_forever()
 
     def update_service(self, zc: Zeroconf, type_: str, name: str) -> None:
         print(f"Service {name} updated")
@@ -52,14 +53,12 @@ class MyServiceListener(ServiceListener):
                 address = addresses[0]
                 portNo = info.port
                 print("connecting...")
-                connect(f"ws://{address}:{portNo}/sensor/connect?type=android.sensor.accelerometer")
-                # change type= to access others sensors
-                # type=android.sensor.gyroscope
+                self.connect(f"ws://{address}:{portNo}/sensor/connect?type=android.sensor.{self.sensor}")
 
-    
 zeroconf = Zeroconf()
-listener = MyServiceListener()
+listener = MyServiceListener('accelerometer') # sensors = ['accelerometer', 'gyroscope']
 browser = ServiceBrowser(zeroconf, "_websocket._tcp.local.", listener)
+
 try:
     input("Press enter to exit...\n\n")
 finally:
