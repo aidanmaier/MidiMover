@@ -11,10 +11,10 @@ class MyServiceListener(ServiceListener):
 
     def on_message(self, ws, message):
         values = json.loads(message)['values']
-        x = values[0]
-        y = values[1]
-        z = values[2]
-        print("x = ", x , "y = ", y , "z = ", z )
+        x, y, z = values[0], values[1], values[2]
+        ts = json.loads(message)['timestamp']
+
+        print(ts, "x = ", x , "y = ", y , "z = ", z)
 
     def on_error(self, ws, error):
         print("error occurred ", error)
