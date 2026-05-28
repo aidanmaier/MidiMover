@@ -1,4 +1,6 @@
-Zero-config WebSockets connection client by UmerCodez
+Zero-config WebSockets connection client for accessing Android IMU data
+
+Code adapted from original by UmerCodez:
 
 [https://github.com/UmerCodez/SensorServer/wiki/Connecting-To-the-Server-Using-Service-Discovery]
 
