@@ -3,14 +3,15 @@ from zeroconf import ServiceBrowser, Zeroconf
 from ws_config import MyServiceListener
 import pandas as pd
 
-zeroconf = Zeroconf()
 ws_address = '_websocket._tcp.local.'
 sensors = ['accelerometer', 'gyroscope']
 axes = ['x', 'y', 'z']
 output_directory = './data/'
 output_filename = 'gesture.csv'
+polling_rate = 1000 # in Hz (MIDI controller standard = 1 kHz)
 
 # Separate listener and browser for each sensor
+zeroconf = Zeroconf()
 listeners = [MyServiceListener(sensor) for sensor in sensors]
 browsers = [ServiceBrowser(zeroconf, ws_address, listener) for listener in listeners]
 
@@ -18,7 +19,6 @@ browsers = [ServiceBrowser(zeroconf, ws_address, listener) for listener in liste
 labels = [sensors, axes]
 cols = pd.MultiIndex.from_product(labels, names=['Sensor', 'Axis'])
 df = pd.DataFrame(columns=cols)
-df.index.name = 'Timestamp'
 
 # Stream controls for testing
 try:
@@ -38,11 +38,11 @@ while stream:
             sensor = listener.sensor
             (x, y, z) = values
             df.loc[timestamp, [(sensor, ax) for ax in axes]] = x, y, z
-            # print(f'{sensor}:\t', values)
+            print(f'{sensor}:\t', values)
         else:
             stream = False
             break
-        time.sleep(0.1) # TODO: Adjust for sample rate
+        time.sleep(1/polling_rate) # convert Hz to seconds
 
 # Write out to .csv
 df.to_csv(output_directory + output_filename)
