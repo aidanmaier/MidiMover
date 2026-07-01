@@ -1,21 +1,12 @@
-from playback import *
-import time
-import mido
+import numpy as np
 
-input_directory = './data/'
-input_filename = 'gesture.csv'
-sensor = 'gyroscope'
-axis = 'x'
+def midi_map(
+        value: float, input_range: list[float], midi_range: list[int]) -> int:
+    """
+    Maps linear data to discreet MIDI values with settable ranges
+    Input values: input_range [2-value range], midi_range [2-value range within 0..127]
+    """
+    note = int(np.interp(value, input_range, midi_range))
+    out = max(0, min(127, note)) # limit output to valid MIDI [0..127] range
+    return out
 
-# Load data from .csv
-data = DataLoader(input_directory, input_filename)
-gyro_streamer = SensorStreamer(data)
-polling_rate = gyro_streamer.polling_rate
-
-print(f'\nPolling rate: {polling_rate} Hz\n')
-
-# Stream values for given sensor and axis at the polling rate
-stream = gyro_streamer.stream(sensor, axis)
-for sample in stream:
-    print(sample)
-    time.sleep(1/polling_rate) # convert Hz to seconds

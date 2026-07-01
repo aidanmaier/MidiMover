@@ -2,6 +2,9 @@ import pandas as pd
 
 class DataLoader():
     def __init__(self, directory: str, filename: str) -> None:
+        """
+        Loads captured motion sensor data from .csv to df
+        """
         self.dir = directory
         self.file = filename
         self.filepath = directory + filename
@@ -14,11 +17,12 @@ class DataLoader():
         self.samples = len(df.index) # number of samples
         self.polling_rate = self.samples / self.length # in Hz
 
-class SensorStreamer():
-    def __init__(self, dataLoader: DataLoader) -> None:
-        self._dataLoader = dataLoader
-        self.polling_rate = dataLoader.polling_rate
-
     def stream(self, sensor: str, axis: str) -> list:
-        data = self._dataLoader.data[(sensor, axis)]
+        """
+        Returns data for given sensor and axis as list
+        """
+        data = self.data[(sensor, axis)]
         return list(data)
+
+
+    
