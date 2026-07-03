@@ -4,7 +4,10 @@ from ws_config import MyServiceListener
 import pandas as pd
 
 ws_address = '_websocket._tcp.local.'
-sensors = ['accelerometer', 'gyroscope']
+sensors = [
+    'accelerometer', 
+    'gyroscope'
+           ]
 axes = ['x', 'y', 'z']
 output_directory = './data/'
 output_filename = 'gesture.csv'
