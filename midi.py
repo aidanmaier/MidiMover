@@ -1,18 +1,8 @@
 import mido
-import time
+import asyncio
 
-class MidiOut():
-    def __init__(self, portName: str, chan: int) -> None:
-        """
-        Configures MIDI connection at given port and channel
-        Input values: portName [any valid string], channel [0..15]
-        """
-        self.port_name = portName
-        self.channel = chan
-        self._outport = mido.open_output(self.port_name)  # type: ignore
-
-        # Default MIDI CC controls
-        self.controls = {
+# Default MIDI CC controls
+control_codes = {
             'mod': 1,
             'volume': 7,
             'resonance': 71,
@@ -26,28 +16,71 @@ class MidiOut():
             'phaser': 95,
         }
 
+class MidiOut():
+    def __init__(self, portName: str, channel: int) -> None:
+        """
+        Wrapper for Mido output functionality
+        Auto-configures a MIDI output at the given port and channel
+        Input values: 
+            portName [any valid string], 
+            channel [0..15]
+        """
+        self.port_name = portName
+        self.channel = channel
+        self._outport = mido.open_output(self.port_name)  # type: ignore
+
     def close(self) -> None:
+        """
+        Closes the output port
+        """
         self._outport.close()
     
-    def note(self, pitch: int, vel: int, dur: float = 0) -> None:
+    def noteOn(self, pitch: int) -> None:
         """
-        Midi Note On message with auto Note Off message after waiting duration
-        Input values: pitch (semitones) [0..127], vel [0..127], dur (seconds) [any float]
+        Starts a sustained note at the given pitch with velocity=64
+        Input values: pitch [0..127]
         """
-        port = self._outport
-        chan = self.channel
-        note_on = mido.Message('note_on', channel=chan, note=pitch, velocity=vel)
-        note_off = mido.Message('note_off', channel=chan, note=pitch, velocity=64)
-        port.send(note_on)
-        time.sleep(dur)
-        port.send(note_off)
+        msg = mido.Message('note_on', channel=self.channel, note=pitch, velocity=64)
+        self._outport.send(msg)
+
+    def noteOff(self, pitch: int) -> None:
+        """
+        Ends the note at the given pitch
+        Input values: pitch [0..127]
+        """
+        msg = mido.Message('note_off', channel=self.channel, note=pitch, velocity=0)
+        self._outport.send(msg)
+        
+    def pitchMod(self, mod: int, ) -> None:
+        """
+        Continuous pitch modification via pitchwheel message
+        Input values: mod [-8192..8191]
+        """
+        msg = mido.Message('pitchwheel', channel=self.channel, pitch=mod)
+        self._outport.send(msg)
     
-    def cc(self, ctrl: int, val: int) -> None:
+    async def perc(self, pitch: int, duration: float = 0.1) -> None:
+        """
+        Play asyncronous time-limited note at the given pitch
+        MIDI Note On message with auto Note Off message after awaiting duration
+        Input values: 
+            pitch (semitones) [0..127], 
+            velocity [0..127], 
+            duration (seconds) [any float]
+        """
+        self.noteOn(pitch=pitch)
+        await asyncio.sleep(duration)
+        self.noteOff(pitch=pitch)
+    
+    def cc(self, control: str, value: int) -> None:
         """
         MIDI Control Change message
-        Input values: ctrl [0..127], val [0..127]
+        Input values: 
+            control [valid controls held in midi.control_codes], 
+            value [0..127]
         """
-        port = self._outport
-        chan = self.channel
-        cc = mido.Message('control_change', channel=chan, control=ctrl, value=val )
-        port.send(cc)
+        outport = self._outport
+        channel = self.channel
+        control_code = control_codes[control]
+        cc = mido.Message('control_change', channel=channel, control=control_code, value=value )
+        outport.send(cc)

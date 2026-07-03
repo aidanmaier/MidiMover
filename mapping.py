@@ -44,14 +44,26 @@ class Scale():
                     full_scale.append(new_note)
         self.full = full_scale
 
-def midi_map(
-        value: float, input_range: list[float], midi_range: list[int]) -> int:
+def midi_map(value: float, input_range: list[float], midi_range: list[int] = [0, 127]) -> int:
     """
-    Maps linear data to discreet MIDI values with settable ranges
+    Maps linear data to discreet MIDI note values with settable input and output ranges
+    Default output range is full MIDI note range [0..127]
     Input values: 
         input_range [2-value range], 
         midi_range [2-value range within 0..127]
     """
     note = int(np.interp(value, input_range, midi_range))
     out = max(0, min(127, note)) # limit output to valid MIDI [0..127] range
+    return out
+
+def pitchwheel_map(value: float, input_range: list[float], pitchwheel_range: list[int] = [-8192, 8191]) -> int:
+    """
+    Maps linear data to discreet MIDI pitchwheel values with settable input and output ranges
+    Default output range is full MIDI pitchwheel range [-8192..8191]
+    Input values: 
+        input_range [floor, ceiling], 
+        pitchweel_range [[floor, ceiling] within -8192..8191]
+    """
+    mod = int(np.interp(value, input_range, pitchwheel_range))
+    out = max(-8192, min(8191, mod)) # limit output to valid pitchwheel [-8192..8191] range
     return out
