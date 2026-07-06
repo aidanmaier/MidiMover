@@ -1,7 +1,7 @@
 import asyncio
 from playback import DataLoader
 from midi import MidiOut
-from mapping import midi_map, pitchwheel_map
+from mapping import note_map, pitchwheel_map
 
 # Motion data variables
 input_directory = './data/'
@@ -34,7 +34,7 @@ async def main() -> None:
     loop = False
     
     # continuous pitch
-    start_pitch = midi_map(gyro_y[0], input_range, midi_range)
+    start_pitch = note_map(gyro_y[0], input_range, midi_range)
     midi_out.noteOn(start_pitch)
     while True:
         for sample in gyro_y:
@@ -48,7 +48,7 @@ async def main() -> None:
 
     # while True:
     #     for sample in gyro_y:
-    #         note = midi_map(sample, input_range, midi_range)
+    #         note = note_map(sample, input_range, midi_range)
     #         print(f"gyro_y={sample:.3f} -> MIDI note={note}")
     #         asyncio.create_task(midi_out.perc(note, duration=1))
     #         await asyncio.sleep(1 / gyro_streamer.polling_rate)  # convert Hz to seconds

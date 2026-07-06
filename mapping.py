@@ -44,7 +44,7 @@ class Scale():
                     full_scale.append(new_note)
         self.full = full_scale
 
-def midi_map(value: float, input_range: list[float], midi_range: list[int] = [0, 127]) -> int:
+def note_map(value: float, input_range: list[float], midi_range: list[int] = [0, 127]) -> int:
     """
     Maps linear data to discreet MIDI note values with settable input and output ranges
     Default output range is full MIDI note range [0..127]

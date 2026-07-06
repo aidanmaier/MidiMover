@@ -4,34 +4,53 @@ import websocket
 import json
 import socket
 
-class MyServiceListener(ServiceListener):
+class WebsocketServiceListener(ServiceListener):
 
     def __init__(self, sensor: str) -> None:
+        """
+        
+        """
         super().__init__()
         self.sensor = sensor
-        self.latest_values: tuple[float, float, float] | None = None
+        self.latest_values: Any = None
 
     def on_message(self, ws: Any, message: str) -> None:
-        """Callback function."""
-        values = json.loads(message)['values']
-        x, y, z = values[0], values[1], values[2]
-        self.latest_values = (x, y, z)
+        """
+        Callback function which loads JSON of latest sensor values and timestamp, 
+        and stores them at self.latest_values.
+        """
+        self.latest_values = json.loads(message)
 
-    def get_values(self) -> tuple[float, float, float] | None:
-        """ Listener function. """
+    def get_values(self) -> Any:
+        """ 
+        Listener function which returns latest captured sensor value and timestamp
+        from JSON stoed in self.latest_values.
+        """
         return self.latest_values
 
     def on_error(self, ws: Any, error: Exception) -> None:
+        """
+        Error message for debugging.
+        """
         print(f'{self.sensor} error: {error}')
 
     def on_close(self, ws: Any, close_code: int | None, reason: str) -> None:
+        """
+        Connection closed message.
+        """
         self.latest_values = None # reset values before close
         print(f'{self.sensor} connection closed (reason: {reason})')
 
     def on_open(self, ws: Any) -> None:
+        """
+        Connection confirmation message.
+        """
         print(f'{self.sensor} connected')
 
     def connect(self, url: str) -> None:
+        """
+        Established open-ended connection to the given socket.
+        """
         ws = websocket.WebSocketApp(
                 url,
                 on_open=self.on_open,

@@ -1,21 +1,27 @@
 import time
 from zeroconf import ServiceBrowser, Zeroconf
-from ws_config import MyServiceListener
+from ws_config import WebsocketServiceListener
 import pandas as pd
 
 ws_address = '_websocket._tcp.local.'
 sensors = [
-    'accelerometer', 
-    'gyroscope'
+    ## Hardware senors:
+    # 'accelerometer', 
+    # 'gyroscope'
+
+    ## Software sensors:
+    'linear_acceleration',
+    # 'rotation_vector'
            ]
+
 axes = ['x', 'y', 'z']
 output_directory = './data/'
-output_filename = 'gesture.csv'
+output_filename = 'horizontal_line.csv'
 polling_rate = 1000 # in Hz (MIDI controller standard = 1 kHz)
 
 # Separate listener and browser for each sensor
 zeroconf = Zeroconf()
-listeners = [MyServiceListener(sensor) for sensor in sensors]
+listeners = [WebsocketServiceListener(sensor) for sensor in sensors]
 browsers = [ServiceBrowser(zeroconf, ws_address, listener) for listener in listeners]
 
 # Record time-series data in df
@@ -33,20 +39,22 @@ finally:
 stream = True
 print('streaming...\n')
 while stream:
-    timestamp = time.time()
-    # Iterate through listeners
+    # Iterate through listeners retrieving data at polling rate for each
     for listener in listeners:
-        values = listener.get_values()
-        if values is not None:
+        message = listener.get_values()
+        if message is not None:
             sensor = listener.sensor
-            (x, y, z) = values
+            # retireve data from listener
+            timestamp = message['timestamp']
+            (x, y, z) = message['values'][:3] # axes data = first 3 items in values
+            # write data to df
             df.loc[timestamp, [(sensor, ax) for ax in axes]] = x, y, z
-            print(f'{sensor}:\t', values)
+            print(f'{sensor}\t{timestamp}\t{[x, y, z]}')
         else:
             stream = False
             break
         time.sleep(1/polling_rate) # convert Hz to seconds
 
 # Write out to .csv
-df.to_csv(output_directory + output_filename)
-print(f'\noutput saved to: {output_filename}\n')
+# df.to_csv(output_directory + output_filename)
+# print(f'\noutput saved to: {output_filename}\n')
