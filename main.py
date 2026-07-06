@@ -1,5 +1,5 @@
 import asyncio
-from playback import DataLoader
+from dev.playback import DataLoader
 from midi import MidiOut
 from mapping import note_map, pitchwheel_map
 
@@ -16,9 +16,9 @@ midi_notes = [i for i in range(128)]
 async def main() -> None:
     # Load data from .csv
     gyro_streamer = DataLoader(input_directory, input_filename)
-    polling_rate = gyro_streamer.polling_rate
+    sample_rate = gyro_streamer.sample_rate
 
-    print(f'\nPolling rate: {polling_rate} Hz\n')
+    print(f'\nPolling rate: {sample_rate} Hz\n')
 
     # Stream values for given sensor and axis at the polling rate
     gyro_x = gyro_streamer.stream('gyroscope', 'x')
@@ -41,7 +41,7 @@ async def main() -> None:
             mod = pitchwheel_map(sample, input_range)
             print(f"gyro_y={sample:.3f} -> pitchwheel={mod}")
             midi_out.pitchMod(mod=mod)
-            await asyncio.sleep(1 / gyro_streamer.polling_rate)  # convert Hz to seconds
+            await asyncio.sleep(1 / gyro_streamer.sample_rate)  # convert Hz to seconds
         if not loop:
             break
     midi_out.noteOff(start_pitch)
@@ -51,7 +51,7 @@ async def main() -> None:
     #         note = note_map(sample, input_range, midi_range)
     #         print(f"gyro_y={sample:.3f} -> MIDI note={note}")
     #         asyncio.create_task(midi_out.perc(note, duration=1))
-    #         await asyncio.sleep(1 / gyro_streamer.polling_rate)  # convert Hz to seconds
+    #         await asyncio.sleep(1 / gyro_streamer.sample_rate)  # convert Hz to seconds
     #     if not loop:
     #         break
 

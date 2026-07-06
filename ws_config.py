@@ -8,7 +8,6 @@ class WebsocketServiceListener(ServiceListener):
 
     def __init__(self, sensor: str) -> None:
         """
-        
         """
         super().__init__()
         self.sensor = sensor
