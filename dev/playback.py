@@ -2,14 +2,11 @@ import pandas as pd
 import time
 import asyncio
 from pathlib import Path
+from typing import Callable
 
 # Input variables
 input_directory = Path(__file__).resolve().parent.parent / 'data'
-input_filename = 'test.csv'
-
-# Output variables
-target_sensors = ['linear_acceleration', 'rotation_vector']
-target_axes = ['x', 'y', 'z']
+input_filename = 'rotation_z.csv'
 
 class DataLoader():
     def __init__(self, directory: str | Path, filename: str) -> None:
@@ -23,10 +20,12 @@ class DataLoader():
         # Load data to df from .csv
         df = pd.read_csv(self.filepath, header=[0, 1], index_col=0)
         self.data = df
+        self.sensors = {tup[0] for tup in df.columns} # set of available sensors
 
         self.length = (df.index[-1] - df.index[0]) / 1_000_000_000  # length in seconds
         self.samples = len(df.index) # number of samples
         self.sample_rate = (self.samples - 1) / self.length # in Hz
+        self.sample_period = 1 / self.sample_rate # sample period in seconds
 
     def get_sample(self, sensor: str, index: int) -> list:
         """
@@ -35,33 +34,42 @@ class DataLoader():
         sample = self.data.iloc[index][sensor]
         return list(sample)
 
+    async def stream(self, callback: Callable, loop: bool = False) -> None:
+        """
+        Streams loaded data at its average sample rate, and triggers the callback function for each sample.
+        """
+        
+        next_time = time.monotonic() # start forward-only clock
+        index = 0
+
+        while index < self.samples:
+
+            # Iterate through samples in data stream and trigger callback function for each
+            callback(index, self)
+            index += 1
+
+            # Normalise loop time to sample_period
+            next_time += self.sample_period # ideal sample period length
+            delay = next_time - time.monotonic() # remainder after subtracting elapsed time
+            if delay > 0:
+                await asyncio.sleep(delay) # wait for duration of remainder
+
+            # If loop, restart the index at completition
+            if index >= self.samples and loop:
+                index = 0
+
+
+# TEST CODE:
+
+def stream_z(index, dataLoader):
+    sensor = 'rotation_vector'
+    print(sensor, dataLoader.get_sample(sensor, index)[2]) # streaming rotation around z axis
+
 async def main():
 
     # Load sensor data from .csv
-    sensor_stream = DataLoader(input_directory, input_filename)
-
-    # Calculate rates
-    sample_rate = sensor_stream.sample_rate
-    sample_period = 1 / sample_rate # sample period in seconds
-    print(f'\nAverage sample rate: {sample_rate} Hz')
-    print(f'Average sample period: {sample_period} seconds\n')
-
-    # Stream data at sample rate
-    next_time = time.monotonic() # start forward-only clock
-    index = 0
-    while index < len(sensor_stream.data):
-        
-        # Iterate through target sensors and access data by sample
-        for sensor in target_sensors:
-            print(sensor, sensor_stream.get_sample(sensor, index))
-
-        index += 1
-
-        # Normalise loop length to sample_period
-        next_time += sample_period # ideal sample period length
-        delay = next_time - time.monotonic() # remainder after subtracting elapsed time
-        if delay > 0:
-            await asyncio.sleep(delay) # wait for duration of remainder
+    dataLoader = DataLoader(input_directory, input_filename)
+    await dataLoader.stream(stream_z, loop=False)
 
 if __name__ == '__main__':
     asyncio.run(main())

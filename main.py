@@ -18,13 +18,6 @@ async def main() -> None:
     gyro_streamer = DataLoader(input_directory, input_filename)
     sample_rate = gyro_streamer.sample_rate
 
-    print(f'\nPolling rate: {sample_rate} Hz\n')
-
-    # Stream values for given sensor and axis at the polling rate
-    gyro_x = gyro_streamer.stream('gyroscope', 'x')
-    gyro_y = gyro_streamer.stream('gyroscope', 'y')
-    gyro_z = gyro_streamer.stream('gyroscope', 'z')
-
     # Stream sensor data and output as MIDI notes
     midi_out = MidiOut(midi_port, channel=midi_channel)
 
@@ -33,9 +26,9 @@ async def main() -> None:
 
     loop = False
     
-    # continuous pitch
-    start_pitch = note_map(gyro_y[0], input_range, midi_range)
-    midi_out.noteOn(start_pitch)
+    # Sustained note
+
+    midi_out.noteOn(pitch=60)
     while True:
         for sample in gyro_y:
             mod = pitchwheel_map(sample, input_range)
