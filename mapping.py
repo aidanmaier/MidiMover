@@ -20,16 +20,17 @@ scale_patterns = {
 }
 
 class Scale():
-    def __init__(self, root: int, type: str) -> None:
+    def __init__(self, root: int, scale_type: str) -> None:
         """
         Holds MIDI note values for a given scale type and root note
         Input values:
-            root [0..11],
-            type [valid scale types held in mapping.scale_patterns]
+            root [0..11] (C..B),
+            scale_type [valid scale types held in mapping.scale_patterns]
         """
+        
         self.root = root
-        self.type = type
-        self.pattern = scale_patterns[type] # degrees of the chromatic scale (1 octave)
+        self.type = scale_type
+        self.pattern = scale_patterns[scale_type] # degrees of the chromatic scale (1 octave)
         self.steps = len(self.pattern) # number of degrees per octave
 
         # transpose scale to start on root and order by asc = lowest octave of scale
@@ -44,17 +45,35 @@ class Scale():
                     full_scale.append(new_note)
         self.full = full_scale
 
+
+def data_map(value: float, input_range: list[float], output_range: list[int]) -> int:
+    """
+    Maps data within input range to output range.
+    Input values: 
+        input_range [floor, ceiling], 
+        output_range [floor, ceiling],
+    """
+
+    output_floor = output_range[0]
+    output_ceiling = output_range[1]
+
+    mapped_value = np.interp(value, input_range, output_range) # interpolate value from input to output ranges
+    limited_value = max(output_floor, min(output_ceiling, mapped_value)) # hard limit output to output range
+
+    return int(limited_value)
+
+
 def note_map(value: float, input_range: list[float], midi_range: list[int] = [0, 127]) -> int:
     """
     Maps linear data to discreet MIDI note values with settable input and output ranges
     Default output range is full MIDI note range [0..127]
     Input values: 
-        input_range [2-value range], 
-        midi_range [2-value range within 0..127]
+        input_range [floor, ceiling], 
+        pitchweel_range [[floor, ceiling] within 0..127]
     """
-    note = int(np.interp(value, input_range, midi_range))
-    out = max(0, min(127, note)) # limit output to valid MIDI [0..127] range
-    return out
+
+    return data_map(value, input_range, midi_range)
+
 
 def pitchwheel_map(value: float, input_range: list[float], pitchwheel_range: list[int] = [-8192, 8191]) -> int:
     """
@@ -64,6 +83,5 @@ def pitchwheel_map(value: float, input_range: list[float], pitchwheel_range: lis
         input_range [floor, ceiling], 
         pitchweel_range [[floor, ceiling] within -8192..8191]
     """
-    mod = int(np.interp(value, input_range, pitchwheel_range))
-    out = max(-8192, min(8191, mod)) # limit output to valid pitchwheel [-8192..8191] range
-    return out
+
+    return data_map(value, input_range, pitchwheel_range)

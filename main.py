@@ -5,7 +5,7 @@ from mapping import note_map, pitchwheel_map
 
 # Motion data variables
 input_directory = './data/'
-input_filename = 'gesture.csv'
+input_filename = 'rotation_z.csv'
 
 # MIDI variables
 midi_port = 'IAC Driver Bus 1'
@@ -13,40 +13,41 @@ midi_channel = 0
 midi_notes = [i for i in range(128)]
 
 
-async def main() -> None:
+# TEST CODE:
+
+async def main():
+
     # Load data from .csv
-    gyro_streamer = DataLoader(input_directory, input_filename)
-    sample_rate = gyro_streamer.sample_rate
+    data = DataLoader(input_directory, input_filename)
+    sample_rate = data.sample_rate
+    sample_period = data.sample_period
+
+    # Mapping variables
+    input_range = [-1.0, 1.0]
+    # note_range = [48, 84]
 
     # Stream sensor data and output as MIDI notes
     midi_out = MidiOut(midi_port, channel=midi_channel)
 
-    input_range = [-7.6, 8.4]
-    midi_range = [48, 84]
+    # Callback function for stream
+    def pitch_mod(sample):
+        # Streaming rotation around z axis
+        sensor = 'rotation_vector'
+        axis = 'z'
+        z_value = float(sample[(sensor, axis)]) 
+        mod = pitchwheel_map(z_value, input_range)
+        # midi_out.pitchMod(mod)
+        print(f'z_rotation={z_value} -> pitchwheel={mod}') 
 
-    loop = False
-    
+    print(f'\nSample rate: {sample_rate} Hz')
+    print(f'Sample period: {sample_period} seconds\n')
+
     # Sustained note
-
     midi_out.noteOn(pitch=60)
-    while True:
-        for sample in gyro_y:
-            mod = pitchwheel_map(sample, input_range)
-            print(f"gyro_y={sample:.3f} -> pitchwheel={mod}")
-            midi_out.pitchMod(mod=mod)
-            await asyncio.sleep(1 / gyro_streamer.sample_rate)  # convert Hz to seconds
-        if not loop:
-            break
-    midi_out.noteOff(start_pitch)
 
-    # while True:
-    #     for sample in gyro_y:
-    #         note = note_map(sample, input_range, midi_range)
-    #         print(f"gyro_y={sample:.3f} -> MIDI note={note}")
-    #         asyncio.create_task(midi_out.perc(note, duration=1))
-    #         await asyncio.sleep(1 / gyro_streamer.sample_rate)  # convert Hz to seconds
-    #     if not loop:
-    #         break
+    await data.stream(pitch_mod, loop=False)
+
+    midi_out.noteOff(pitch=60)
 
 if __name__ == '__main__':
     asyncio.run(main())
