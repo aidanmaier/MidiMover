@@ -1,6 +1,6 @@
-import pandas as pd
 import time
 import asyncio
+import pandas as pd
 from pathlib import Path
 from typing import Callable
 
@@ -54,27 +54,34 @@ class DataLoader():
                 await asyncio.sleep(delay) # wait for duration of remainder
 
             # If loop, restart the index at completion
-            if index >= self.samples and loop:
+            if (index >= self.samples) and loop:
                 index = 0
 
 # TEST CODE:
 
-# Input variables
-input_directory = Path(__file__).resolve().parent.parent / 'data'
-input_filename = 'rotation_z.csv'
-
-def z_rotation(sample: pd.Series):
-    # streaming rotation around z axis
-    sensor = 'rotation_vector'
-    axis = 'z'
-    z_value = float(sample[(sensor, axis)]) 
-    print(f'{sensor} {axis}: {z_value}') 
-
-async def main():
-
-    # Load sensor data from .csv
-    dataLoader = DataLoader(input_directory, input_filename)
-    await dataLoader.stream(z_rotation, loop=False)
-
 if __name__ == '__main__':
+    
+# Input variables
+    input_directory = Path(__file__).resolve().parent.parent / 'data'
+    input_filename = 'test.csv'
+
+    # Callback functions
+    def z_rotation(sample: pd.Series):
+        # streaming rotation around z axis
+        sensor = 'rotation_vector'
+        axis = 'z'
+        z_value = float(sample[(sensor, axis)]) 
+        # print(f'{sensor} {axis}: {z_value}') 
+        print(sample)
+
+    def print_values(sample: pd.Series):
+        print(sample)
+
+    async def main():
+
+        # Load sensor data from .csv
+        data = DataLoader(input_directory, input_filename)
+        await data.stream(callback=print_values, loop=False)
+        print(f'\nSample rate: {data.sample_rate}, Sample period: {data.sample_period}\n') #DEBUG
+
     asyncio.run(main())

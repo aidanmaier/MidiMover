@@ -1,50 +1,79 @@
-from typing import Any
-from zeroconf import ServiceListener, Zeroconf
-import websocket
 import json
 import socket
+from typing import Any
+import websocket
+from zeroconf import ServiceListener, Zeroconf
 
 class WebsocketServiceListener(ServiceListener):
 
-    def __init__(self, sensor: str) -> None:
+    def __init__(self, sensors: list[str]) -> None:
         """
+        Initiates zero-config Websockes connection with SensorStreamer and listens for streamed sensor data. 
+        
+        Parameters: 
+        sensors (list of strings): list of Android sensor types to access
         """
         super().__init__()
-        self.sensor = sensor
-        self.latest_values: Any = None
+        self.sensors = sensors
+
+        # Data structure to hold the latest values for each sensor
+        self.latest_values: dict[str, Any] = {
+            'timestamp' : None,
+            'sensors' : {
+                sensor: None for sensor in self.sensors
+            }}
 
     def on_message(self, ws: Any, message: str) -> None:
         """
-        Callback function which loads JSON of latest sensor values and timestamp, 
-        and stores them at self.latest_values.
+        Callback function which loads JSON of latest sensor data and stores it at self.latest_values.
         """
-        self.latest_values = json.loads(message)
 
-    def get_values(self) -> Any:
-        """ 
-        Listener function which returns latest captured sensor value and timestamp
-        from JSON stoed in self.latest_values.
+        # Load JSON from API
+        try:
+            msg = json.loads(message)
+        except json.JSONDecodeError as exc:
+            print(f'{self} could not decode message: {exc}')
+            return
+        
+        # Exctract data from JSON
+        timestamp = msg.get('timestamp', None)
+        sensor_str = msg.get('type', None)
+        if isinstance(sensor_str, str):
+            sensor_type = sensor_str.replace('android.sensor.', '')
+        else:
+            sensor_type = None
+        values = msg.get('values', [])
+
+        # Update latest values
+        if timestamp:
+            self.latest_values['timestamp'] = timestamp
+        if sensor_type and values:
+            self.latest_values['sensors'][sensor_type] = values
+
+    def get_values(self) -> dict[str, Any] | None:
+        """
+        Listener function which returns the latest captured sensor values.
         """
         return self.latest_values
 
     def on_error(self, ws: Any, error: Exception) -> None:
         """
-        Error message for debugging.
+        Display error message.
         """
-        print(f'{self.sensor} error: {error}')
+        print(f'{self} error: {error}')
 
     def on_close(self, ws: Any, close_code: int | None, reason: str) -> None:
         """
         Connection closed message.
         """
-        self.latest_values = None # reset values before close
-        print(f'{self.sensor} connection closed (reason: {reason})')
+        self.latest_values = {} # reset values before close
+        print(f'{self} connection closed')
 
     def on_open(self, ws: Any) -> None:
         """
         Connection confirmation message.
         """
-        print(f'{self.sensor} connected')
+        print(f'{self} connected')
 
     def connect(self, url: str) -> None:
         """
@@ -78,4 +107,5 @@ class WebsocketServiceListener(ServiceListener):
                 address = addresses[0]
                 portNo = info.port
                 print("connecting...\n")
-                self.connect(f"ws://{address}:{portNo}/sensor/connect?type=android.sensor.{self.sensor}")
+                sensor_str = ','.join([f'"android.sensor.{sensor}"' for sensor in self.sensors])
+                self.connect(f'ws://{address}:{portNo}/sensors/connect?types=[{sensor_str}]')
