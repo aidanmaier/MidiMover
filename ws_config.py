@@ -1,7 +1,7 @@
 import json
 import socket
-from typing import Any
 import websocket
+from typing import Any
 from zeroconf import ServiceListener, Zeroconf
 
 class WebsocketServiceListener(ServiceListener):
@@ -11,21 +11,32 @@ class WebsocketServiceListener(ServiceListener):
         Initiates zero-config Websockes connection with SensorStreamer and listens for streamed sensor data. 
         
         Parameters: 
-        sensors (list of strings): list of Android sensor types to access
+        sensors (list of strings): list of Android sensor types to access, must contain two or more items.
         """
         super().__init__()
-        self.sensors = sensors
+
+        # Handle sensors value
+        if isinstance(sensors, list):
+            if len(sensors) >= 2:
+                self.sensors = sensors
+            else:
+                ValueError('two or more sensors must be specified')
+        else:
+            TypeError('sensors must be a list of strings')
+
+        self.open: bool = False # connection flag
 
         # Data structure to hold the latest values for each sensor
         self.latest_values: dict[str, Any] = {
             'timestamp' : None,
             'sensors' : {
-                sensor: None for sensor in self.sensors
+                sensor: [] for sensor in self.sensors
             }}
 
     def on_message(self, ws: Any, message: str) -> None:
         """
         Callback function which loads JSON of latest sensor data and stores it at self.latest_values.
+        Messages are 1 per sensor change, not batched.
         """
 
         # Load JSON from API
@@ -35,7 +46,7 @@ class WebsocketServiceListener(ServiceListener):
             print(f'{self} could not decode message: {exc}')
             return
         
-        # Exctract data from JSON
+        # Extract data from JSON
         timestamp = msg.get('timestamp', None)
         sensor_str = msg.get('type', None)
         if isinstance(sensor_str, str):
@@ -50,7 +61,7 @@ class WebsocketServiceListener(ServiceListener):
         if sensor_type and values:
             self.latest_values['sensors'][sensor_type] = values
 
-    def get_values(self) -> dict[str, Any] | None:
+    def get_values(self) -> dict[str, Any]:
         """
         Listener function which returns the latest captured sensor values.
         """
@@ -67,13 +78,15 @@ class WebsocketServiceListener(ServiceListener):
         Connection closed message.
         """
         self.latest_values = {} # reset values before close
-        print(f'{self} connection closed')
+        print(f'{self} disconnected')
+        self.open = False
 
     def on_open(self, ws: Any) -> None:
         """
         Connection confirmation message.
         """
         print(f'{self} connected')
+        self.open = True
 
     def connect(self, url: str) -> None:
         """

@@ -7,13 +7,30 @@ from ws_config import WebsocketServiceListener
 class DataStreamer():
 
     def __init__(self, ws_address: str, sensors: list[str]) -> None:
-        """ """
-        self.ws_address = ws_address
-        self.sensors = sensors
+        """ 
+        Parameters: 
+        ws_address (string): local websocket address
+        sensors (list of strings): list of Android sensor types to access, must contain two or more items.
+        """
+        # Handle ws_address value
+        if isinstance(ws_address, str):
+            self.ws_address = ws_address
+        else:
+            TypeError('ws_address must be a string')
 
-        # Create Listener and Browser
+        # Handle sensors value
+        if isinstance(sensors, list):
+            if len(sensors) >= 2:
+                self.sensors = sensors
+            else:
+                ValueError('two or more sensors must be specified')
+        else:
+            TypeError('sensors must be a list of strings')
+            
+        # Create Listener and Zeroconf Browser
+        self.zeroconf = Zeroconf() # Zerconf instance
         self.listener = WebsocketServiceListener(self.sensors)
-        self.browser = ServiceBrowser(Zeroconf(), self.ws_address, self.listener)
+        self.browser = ServiceBrowser(self.zeroconf, self.ws_address, self.listener)
     
     async def stream(self, callback: Callable, sample_rate: int) -> None:
         """
@@ -23,23 +40,29 @@ class DataStreamer():
         callback (Callable): callback function triggered once per sample
         sample_rate (int): sampling rate in Hz
         """
+
+        # Wait for connection
+        print('\nConnect input device\n')
+        while not self.listener.open:
+            await asyncio.sleep(0.1)
+        self.zeroconf.close()
+
         # User starts stream recording manually
         try:
-            input("\nConnect, then press enter to begin stream...\n\n")
+            input('\nPress enter to begin streaming\n')
         finally:
-            Zeroconf().close()
+            print('streaming...\n')
 
         # Capture Loop running at sample rate (Hz)
         stream = True
         sample_period = 1 / sample_rate # sample period in seconds
         next_time = time.monotonic() # start forward-only clock
-        print('streaming...\n')
-
+    
         while stream:
 
             sample = self.listener.get_values()
 
-            if sample:
+            if sample and sample['timestamp']:
                 callback(sample)
             else:
                 stream = False
