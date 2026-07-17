@@ -5,11 +5,11 @@ from signal_processing import calculate_world_acceleration
 from midi import MidiOut
 from mapping import note_map, pitchwheel_map
 
-# Motion data variables
+# Saved data input variables
 input_directory = './data/'
 input_filename = 'rotation_z.csv'
 
-# Data stream vriables
+# Live data input vriables
 ws_address = '_websocket._tcp.local.'
 sensors = [
     # 'gyroscope', 
@@ -17,9 +17,9 @@ sensors = [
     'rotation_vector', 
     'linear_acceleration'
         ]
-sample_rate = 50 # Hz
+sample_rate = 10 # Hz
 
-# MIDI variables
+# MIDI ouput variables
 midi_port = 'IAC Driver Bus 1'
 midi_channel = 0
 midi_notes = [i for i in range(128)]

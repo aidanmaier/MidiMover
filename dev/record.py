@@ -17,8 +17,8 @@ def estimate_sample_rate(dataframe: pd.DataFrame) -> float:
 # Input variables
 ws_address = '_websocket._tcp.local.'
 sensors = [
-    # 'gyroscope', 
-    # 'accelerometer', 
+    'gyroscope', 
+    'accelerometer', 
     'rotation_vector', 
     'linear_acceleration',
     'gravity'
@@ -70,8 +70,6 @@ async def main():
         # Write out to .csv
         df.to_csv(output_directory + output_filename)
         print(f'\noutput saved to: {output_directory + output_filename}')
-
-    print(df)
 
     # Rates estimated from recorded data
     avg_sample_rate = estimate_sample_rate(df)
