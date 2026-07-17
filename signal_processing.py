@@ -11,79 +11,79 @@ def calculate_world_acceleration(rotation_vector: list[float], linear_accelerati
     linear_acceleration (list): [x, y, z]
     
     Returns:
-    list: acceleration relative to the Word Frame axes [east, north, up]
+    list: acceleration relative to the World Frame axes [east, north, up]
     returns [] if conversion cannot be calculated due to missing data
     """
-    # Convert inputs to numpy arrays
+    
     lin_acc = np.array(linear_acceleration)
     rot_vec = np.array(rotation_vector)
+
+    # Handle vector formatting
+    if len(lin_acc) != 3 or len(rot_vec) < 3:
+        return [] # return empty list if conversion cannot be calculated
     
-    # Convert the rotation vector to a quaternion
-    # Handle the rotation vector format
     if len(rot_vec) == 3: # compute the scalar if absent
         xyz_squared_sum = np.sum(rot_vec**2)
         # Handle for square root of a negative, due to rounding errors
-        scalar = np.sqrt(max(0.0, 1.0 - xyz_squared_sum))
-        quaternion = np.array([rot_vec[0], rot_vec[1], rot_vec[2], scalar])
-    elif len(rot_vec) >= 4:
-        quaternion = rot_vec[:4]
+        w = np.sqrt(max(0.0, 1.0 - xyz_squared_sum))
+        x, y, z = rot_vec
+        quaternion = np.array([x, y, z, w])
     else:
-        print(len(rot_vec))
-        return [] # return empty list if conversion cannot be calculated
+        quaternion = rot_vec[:4]
         
     # Create rotation object from the quaternion
     device_rotation = Rotation.from_quat(quaternion)
     
     # Apply rotation to the acceleration vector
-    earth_acc = device_rotation.apply(lin_acc)
+    world_acc = device_rotation.apply(lin_acc)
     
-    return [float(i) for i in earth_acc]
+    return [float(i) for i in world_acc]
 
 
 def calculate_user_acceleration(rotation_vector: list[float], linear_acceleration: list[float]) -> list[float]:
     """
     Transforms linear acceleration from the Device Frame (x, y, z) to the User Frame (right, forward, up) 
-    by stripping out compass heading (yaw).
-    
+    by stripping out compass heading (yaw) using inverse rotation.
+
     Parameters:
-    rotation_vector (list): [x, y, z, w] or [x, y, z] where w = scalar
+    rotation_vector (list): [x, y, z] or [x, y, z, w] where w = scalar
     linear_acceleration (list): [x, y, z]
     
     Returns:
-    list: acceleration relative to the user [right, forward, up]
+    list: acceleration relative to the World Frame axes [right, forward, up]
     returns [] if conversion cannot be calculated due to missing data
     """
     
-    # Convert inputs to numpy arrays
     lin_acc = np.array(linear_acceleration)
     rot_vec = np.array(rotation_vector)
+
+    # Handle vector formatting
+    if len(lin_acc) != 3 or len(rot_vec) < 3:
+        return [] # return empty list if conversion cannot be calculated
     
-    # Convert the rotation vector to a quaternion
-    # Handle the rotation vector format
     if len(rot_vec) == 3: # compute the scalar if absent
         xyz_squared_sum = np.sum(rot_vec**2)
-        scalar = np.sqrt(max(0.0, 1.0 - xyz_squared_sum))
-        quaternion = np.array([rot_vec[0], rot_vec[1], rot_vec[2], scalar])
-    elif len(rot_vec) >= 4:
-        quaternion = rot_vec[:4]
+        # Handle for square root of a negative, due to rounding errors
+        w = np.sqrt(max(0.0, 1.0 - xyz_squared_sum))
+        x, y, z = rot_vec
+        quaternion = np.array([x, y, z, w])
     else:
-        return [] # return empty list if conversion cannot be calculated
-
+        quaternion = rot_vec[:4]
+        
     # Create rotation object from the quaternion
     device_rotation = Rotation.from_quat(quaternion)
 
-    # Extract Euler angles in zyx order
-    # z = Yaw (heading), y = Pitch, x = Roll
-    yaw, pitch, roll = device_rotation.as_euler('zyx', degrees=False)
+    # Transform to world coordinates (east, north, up)
+    world_acc = device_rotation.apply(lin_acc)
+
+    # Extract heading angle (Yaw) around the global (vertical) Z-axis 
+    yaw, _, _ = device_rotation.as_euler('zyx', degrees=False)
     
-    # Create new rotation object ignoring Yaw (z-rotation = 0), containing only tilt data
-    tilt_rotation = Rotation.from_euler('zyx', [0, pitch, roll], degrees=False)
+    # Un-rotate the world frame around the Z-axis by the yaw angle 
+    # to align the frame Y-axis with the device forward direction
+    yaw_rotation = Rotation.from_euler('z', yaw, degrees=False)
+    user_acc = yaw_rotation.inv().apply(world_acc)
     
-    # Apply tilt-only transformation to the raw device acceleration
-    user_acc = tilt_rotation.apply(lin_acc)
-    
-    # Map output array directly to [Right, Forward, Up]
-    # By setting yaw = 0, the original phone forward direction becomes the User Frame forward
     return [float(i) for i in user_acc]
 
 
@@ -107,7 +107,7 @@ def calculate_magnitude(vector: list[float]) -> float:
 class MagnitudeZuptTracker:
     def __init__(self, window_size: int = 10, variance_threshold: float = 0.01):
         """
-        Tracks movement state based on magnitude for Zero Update Position and Timing
+        Tracks movement state based on magnitude variance for Zero Update Position and Timing.
         
         Parameters:
         window_size (int): number of sample used for variance checking
