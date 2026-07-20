@@ -63,10 +63,10 @@ def data_map(value: float, input_range: list[float], output_range: list[int]) ->
     return int(limited_value)
 
 
-def note_map(value: float, input_range: list[float], midi_range: list[int] = [0, 127]) -> int:
+def midi_map(value: float, input_range: list[float], midi_range: list[int] = [0, 127]) -> int:
     """
-    Maps linear data to discreet MIDI note values with settable input and output ranges
-    Default output range is full MIDI note range [0..127]
+    Maps continuous linear data to discreet MIDI values with settable input and output ranges. 
+    Default output range is full MIDI note range [0..127].
     Input values: 
         input_range [floor, ceiling], 
         pitchweel_range [[floor, ceiling] within 0..127]

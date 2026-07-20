@@ -58,7 +58,7 @@ class MidiOut():
         """
         msg = mido.Message('pitchwheel', channel=self.channel, pitch=mod)
         self._outport.send(msg)
-    
+
     async def perc(self, pitch: int, duration: float = 0.1) -> None:
         """
         Play asyncronous time-limited note at the given pitch

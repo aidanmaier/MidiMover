@@ -3,7 +3,7 @@ from dev.playback import DataLoader
 from capture import DataStreamer
 from signal_processing import calculate_world_acceleration
 from midi import MidiOut
-from mapping import note_map, pitchwheel_map
+from mapping import midi_map, pitchwheel_map
 
 # Saved data input variables
 input_directory = './data/'
@@ -24,6 +24,10 @@ midi_port = 'IAC Driver Bus 1'
 midi_channel = 0
 midi_notes = [i for i in range(128)]
 
+# Mapping variables
+input_range = [0.0, 15.0]
+note_range = [48, 84]
+
 
 # TEST CODE:
 
@@ -36,10 +40,6 @@ async def main():
 
     # Stream live data
     data = DataStreamer(ws_address, sensors)
-
-    # Mapping variables
-    input_range = [-1.0, 1.0]
-    # note_range = [48, 84]
 
     # Stream sensor data and output as MIDI notes
     midi_out = MidiOut(midi_port, channel=midi_channel)
@@ -59,9 +59,6 @@ async def main():
         linear_acceleration = sample['sensors']['linear_acceleration']
         world_acceleration = calculate_world_acceleration(rotation_vector, linear_acceleration)
         print(world_acceleration)
-
-    # print(f'\nSample rate: {sample_rate} Hz')
-    # print(f'Sample period: {sample_period} seconds\n')
 
     # Sustained note
     # midi_out.noteOn(pitch=60)
