@@ -4,6 +4,8 @@ from signal_processing import calculate_magnitude
 from midi import MidiOut
 from mapping import midi_map, pitchwheel_map
 
+
+
 # Live data input vriables
 ws_address = '_websocket._tcp.local.'
 sensors = [
@@ -21,6 +23,7 @@ midi_channel = 0
 # Mapping variables
 mag_range = [0.0, 15.0]
 rot_range = [-1.0, 1.0]
+
 
 static_pitch = 69
 
@@ -48,9 +51,12 @@ async def main():
         # Midi Control messages
         midi_out.cc('volume', value=vol)
         # print(f'Magnitude: {mag}, CC Volume: {vol}')
+
         # midi_out.pitchMod(pitch)
         # print(f'Y-Rotation: {ry}, Pitchwheel: {pitch}')
+
         midi_out.cc('cutoff', value=filt)
+
 
     # Sustained note
     midi_out.noteOn(pitch=static_pitch)

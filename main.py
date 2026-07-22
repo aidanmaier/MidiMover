@@ -1,73 +1,78 @@
-import asyncio
-from dev.playback import DataLoader
-from capture import DataStreamer
-from signal_processing import calculate_world_acceleration
-from midi import MidiOut
-from mapping import midi_map, pitchwheel_map
+import tkinter as tk
+from tkinter import ttk
 
-# Saved data input variables
-input_directory = './data/'
-input_filename = 'rotation_z.csv'
+from gui_components.input import ConnectionFrame
+from gui_components.mapping import MappingFrame
+from gui_components.output import MidiFrame
 
-# Live data input vriables
-ws_address = '_websocket._tcp.local.'
-sensors = [
-    # 'gyroscope', 
-    # 'accelerometer', 
-    'rotation_vector', 
-    'linear_acceleration'
-        ]
-sample_rate = 10 # Hz
+class Settings:
+    """ Shared config for global settings. """
 
-# MIDI ouput variables
-midi_port = 'IAC Driver Bus 1'
-midi_channel = 0
-midi_notes = [i for i in range(128)]
+    def __init__(self):
+        # Input variables
+        self.ws_address = '_websocket._tcp.local.'
+        self.sensors = ['rotation_vector', 'linear_acceleration']
+        self.sample_rate = 50
+        
+        # Output variables
+        self.default_outport = 'IAC Driver Bus 1'
+        # self.default_outport = 'Fake Port'
+    
+    def _set_sample_rate(self, value: int) -> None:
+        """ Setter for sample rate value. """
+        self.sample_rate = value
 
-# Mapping variables
-input_range = [0.0, 15.0]
-note_range = [48, 84]
+class Tabs(ttk.Notebook):
+    """ Tabbed container for GUI frames. """
+    def __init__(self, container, settings):
+        super().__init__(container)
+        self.settings = settings
 
+        self._create_widgets()
+        self.bind('<<NotebookTabChanged>>', self._on_tab_changed)
+    
+    def _create_widgets(self):
+        for frame in [
+            ConnectionFrame(self, self.settings), 
+            MappingFrame(self, self.settings), 
+            MidiFrame(self, self.settings)
+        ]:
+            self.add(frame, text=frame.name)
+    
+    def _on_tab_changed(self, event):
+        """ Force update of new tab for instant rendering. """
+        selected_tab = self.select()
+        if selected_tab:
+            tab = self.nametowidget(selected_tab)
+            tab.update_idletasks()
 
-# TEST CODE:
+class App(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.settings = Settings()
 
-async def main():
+        # Configure root window
+        self.title('Motion Controller')
 
-    # Load data from .csv
-    # data = DataLoader(input_directory, input_filename)
-    # sample_rate = data.sample_rate
-    # sample_period = data.sample_period
+        # Center window
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        window_width = 600
+        window_height = 400
+        offset_x = int(screen_width/2 - window_width/2) # distance to screen center - distance to window center
+        offset_y = int(screen_height/2 - window_height/2)         
 
-    # Stream live data
-    data = DataStreamer(ws_address, sensors)
+        # Window size
+        self.geometry(f'{window_width}x{window_height}+{offset_x}+{offset_y}')
+        self.resizable(False, False)
+        self.attributes('-topmost', 1) # always on top
 
-    # Stream sensor data and output as MIDI notes
-    midi_out = MidiOut(midi_port, channel=midi_channel)
+        self._create_widgets()
+    
+    def _create_widgets(self):
+        Tabs(self, self.settings).pack(pady=10, fill='both', expand=True)
 
-    # Callback function for stream
-    def pitch_mod(sample):
-        # Streaming rotation around z axis
-        sensor = 'rotation_vector'
-        axis = 'z'
-        z_value = float(sample[(sensor, axis)]) 
-        mod = pitchwheel_map(z_value, input_range)
-        # midi_out.pitchMod(mod)
-        print(f'z_rotation={z_value} -> pitchwheel={mod}') 
-
-    def print_world_acceleration(sample):
-        rotation_vector = sample['sensors']['rotation_vector']
-        linear_acceleration = sample['sensors']['linear_acceleration']
-        world_acceleration = calculate_world_acceleration(rotation_vector, linear_acceleration)
-        print(world_acceleration)
-
-    # Sustained note
-    # midi_out.noteOn(pitch=60)
-
-    await data.stream(print_world_acceleration, sample_rate)
-
-    # midi_out.noteOff(pitch=60)
 
 if __name__ == '__main__':
-    asyncio.run(main())
-
-
+    app = App()
+    app.mainloop()
