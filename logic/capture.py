@@ -32,13 +32,14 @@ class DataStreamer():
         self.listener = WebsocketServiceListener(self.sensors)
         self.browser = ServiceBrowser(self.zeroconf, self.ws_address, self.listener)
     
-    async def stream(self, callback: Callable, sample_rate: int) -> None:
+    async def stream(self, callback: Callable, sample_rate: int, wait_for_user: bool = True, stop_event = None) -> None:
         """
         Streams input data at given sample_rate data and triggers the callback function for each sample.
 
         Parameters:
         callback (Callable): callback function triggered once per sample
         sample_rate (int): sampling rate in Hz
+        wait_for_user (bool): whether to pause for manual confirmation before streaming
         """
 
         # Wait for connection
@@ -48,9 +49,12 @@ class DataStreamer():
         self.zeroconf.close()
 
         # User starts stream recording manually
-        try:
-            input('\nPress enter to begin streaming\n')
-        finally:
+        if wait_for_user:
+            try:
+                input('\nPress enter to begin streaming\n')
+            finally:
+                print('streaming...\n')
+        else:
             print('streaming...\n')
 
         # Capture Loop running at sample rate (Hz)
@@ -59,6 +63,8 @@ class DataStreamer():
         next_time = time.monotonic() # start forward-only clock
     
         while stream:
+            if stop_event is not None and stop_event.is_set():
+                break
 
             sample = self.listener.get_values()
 
@@ -76,7 +82,8 @@ class DataStreamer():
                 await asyncio.sleep(delay) # wait for duration of remainder 
 
             
-# TEST CODE:
+            
+    # TEST CODE:
 if __name__ == '__main__':
 
     ws_address = '_websocket._tcp.local.'

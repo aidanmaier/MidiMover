@@ -1,42 +1,46 @@
 import tkinter as tk
 from tkinter import ttk
-
-from gui_components.input import ConnectionFrame
-from gui_components.mapping import MappingFrame
-from gui_components.output import MidiFrame
+from gui.status import StatusBar
+from gui.input import ConnectionFrame
+from gui.mapping import MappingFrame
+from gui.output import MidiFrame
 
 class Settings:
     """ Shared config for global settings. """
-
+    # Settings object passed to all gui components so all variables are settable
+    # tk variables refire when updated
     def __init__(self):
         # Input variables
-        self.ws_address = '_websocket._tcp.local.'
+        self.ws_address = tk.StringVar(value='_websocket._tcp.local.')
         self.sensors = ['rotation_vector', 'linear_acceleration']
-        self.sample_rate = 50
-        
+        self.sample_rate = tk.IntVar(value=50)
         # Output variables
-        self.default_outport = 'IAC Driver Bus 1'
-        # self.default_outport = 'Fake Port'
-    
-    def _set_sample_rate(self, value: int) -> None:
-        """ Setter for sample rate value. """
-        self.sample_rate = value
+        self.default_outport = tk.StringVar(value='IAC Driver Bus 1') # 'IAC Driver Bus 1'
+        # Runtime variables
+        self.running_status = tk.BooleanVar(value=False)
+        self.connection_status = tk.StringVar(value='Unconnected')
+        self.input_connection = tk.StringVar(value="< Connect Device >")
+        self.input_connection_status = tk.BooleanVar(value=False)
+        self.output_connection = tk.StringVar(value='< Connect MIDI Port >')
+        self.output_connection_status = tk.BooleanVar(value=False)
 
 class Tabs(ttk.Notebook):
     """ Tabbed container for GUI frames. """
+
     def __init__(self, container, settings):
         super().__init__(container)
         self.settings = settings
+        self.midi_frame = None
 
         self._create_widgets()
         self.bind('<<NotebookTabChanged>>', self._on_tab_changed)
     
     def _create_widgets(self):
-        for frame in [
-            ConnectionFrame(self, self.settings), 
-            MappingFrame(self, self.settings), 
-            MidiFrame(self, self.settings)
-        ]:
+        connection_frame = ConnectionFrame(self, self.settings)
+        mapping_frame = MappingFrame(self, self.settings)
+        self.midi_frame = MidiFrame(self, self.settings)
+        
+        for frame in [connection_frame, mapping_frame, self.midi_frame]:
             self.add(frame, text=frame.name)
     
     def _on_tab_changed(self, event):
@@ -68,9 +72,23 @@ class App(tk.Tk):
         self.attributes('-topmost', 1) # always on top
 
         self._create_widgets()
+        self.protocol('WM_DELETE_WINDOW', self._on_close)
     
     def _create_widgets(self):
-        Tabs(self, self.settings).pack(pady=10, fill='both', expand=True)
+        self.status = StatusBar(self, self.settings)
+        self.status.pack(padx=10, fill='x', expand=True)
+        self.tabs = Tabs(self, self.settings)
+        self.tabs.pack(pady=10, fill='both', expand=True)
+
+    def _on_close(self):
+        """ Cleanup handler before window closes. """
+        # Close any open midi port
+        if self.tabs.midi_frame and self.tabs.midi_frame.connection_state:
+            self.tabs.midi_frame._disconnect_outport()
+        # Stop stream
+        if self.settings.running_status.get():
+            self.settings.running_status.set(False)
+        self.destroy()
 
 
 if __name__ == '__main__':

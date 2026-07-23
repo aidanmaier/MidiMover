@@ -3,7 +3,7 @@ import pandas as pd
 from zeroconf import ServiceBrowser, Zeroconf
 from sys import path
 path.insert(0, "../")
-from capture import DataStreamer
+from logic.capture import DataStreamer
 
 def estimate_sample_rate(dataframe: pd.DataFrame) -> float:
     """

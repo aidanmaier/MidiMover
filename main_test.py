@@ -1,6 +1,6 @@
 import asyncio
 from dev.playback import DataLoader
-from capture import DataStreamer
+from logic.capture import DataStreamer
 from signal_processing import calculate_world_acceleration
 from midi import MidiOut
 from mapping import midi_map, pitchwheel_map

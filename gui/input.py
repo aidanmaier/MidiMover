@@ -2,16 +2,21 @@ import tkinter as tk
 from tkinter import ttk
 import asyncio
 import threading
-from capture import DataStreamer
+from logic.capture import DataStreamer
 
 class ConnectionFrame(ttk.Frame):
-    """ Frame for configuring input device connections. """
+    """ GUI container for configuring input device connections. """
     
     def __init__(self, container, settings):
         super().__init__(container)
         self.name = 'Connect Device'
         self.settings = settings
-        self.options = {'sticky': 'w', 'padx':10, 'pady':(10, 5)}
+        self.options = {'sticky': 'w', 'padx':10, 'pady':(10, 5)} # widgit placement options
+
+        self.selected_device = None
+        self.connection_state = False # connection state flag
+        self.connected_device = None
+        self.connected_device_name = None
 
         self.status_var = tk.StringVar(value='Unconnected') # connection status label
         self.stream_thread = None
@@ -97,8 +102,8 @@ class ConnectionFrame(ttk.Frame):
             await data.stream(
                 handle_sample, 
                 self.settings.sample_rate, 
-                # wait_for_user=False,
-                # stop_event=self.stop_event
+                wait_for_user=True,
+                stop_event=self.stop_event
                               )
 
         try:

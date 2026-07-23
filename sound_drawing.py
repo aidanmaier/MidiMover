@@ -1,5 +1,5 @@
 import asyncio
-from capture import DataStreamer
+from logic.capture import DataStreamer
 from signal_processing import calculate_magnitude
 from midi import MidiOut
 from mapping import midi_map, pitchwheel_map
