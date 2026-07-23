@@ -20,7 +20,7 @@ class StatusBar(ttk.Frame):
         self._create_widgets()
 
     def _create_widgets(self):
-
+        # Start/Stop buttons
         self.start_button = ttk.Button(self, text='START', command=self._on_start_button)
         self.start_button.grid(column=0, row=0, **self.options)
 
@@ -47,15 +47,6 @@ class StatusBar(ttk.Frame):
         self.settings.output_connection_status.trace_add('write', self._update_output_status_color)
         self._update_output_status_color()
 
-    def _on_start_button(self):
-        running = self.settings.running_status.get()
-        if not running:
-            self.settings.running_status.set(True)
-            self.start_button.config(text='STOP')
-        else:
-            self.settings.running_status.set(False)
-            self.start_button.config(text='START')
-
     def _update_input_status_color(self, *args):
         """ Status colors: red = unconnected, blue = default port, green = connected port. """
         name = self.settings.input_connection.get()
@@ -69,6 +60,15 @@ class StatusBar(ttk.Frame):
             color = 'blue'
 
         self.input_status.config(foreground=color)
+
+    def _on_start_button(self):
+        running = self.settings.running_status.get()
+        if not running:
+            self.settings.running_status.set(True)
+            self.start_button.config(text='STOP')
+        else:
+            self.settings.running_status.set(False)
+            self.start_button.config(text='START')
 
     def _update_output_status_color(self, *args):
         """ Status colors: red = unconnected, blue = default port, green = connected port. """

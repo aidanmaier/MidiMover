@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from gui.status import StatusBar
-from gui.input import ConnectionFrame
+from gui.input_alt import ConnectionFrame
 from gui.mapping import MappingFrame
 from gui.output import MidiFrame
 
@@ -10,12 +10,15 @@ class Settings:
     # Settings object passed to all gui components so all variables are settable
     # tk variables refire when updated
     def __init__(self):
-        # Input variables
-        self.ws_address = tk.StringVar(value='_websocket._tcp.local.')
+        # Input constants
+        self.ws_address = '_websocket._tcp.local.'
         self.sensors = ['rotation_vector', 'linear_acceleration']
+
+        # Saved settings
         self.sample_rate = tk.IntVar(value=50)
-        # Output variables
-        self.default_outport = tk.StringVar(value='IAC Driver Bus 1') # 'IAC Driver Bus 1'
+        self.default_device = tk.StringVar(value="Aidan's A54")
+        self.default_outport = tk.StringVar(value="IAC Driver Bus 1") # 'IAC Driver Bus 1'
+
         # Runtime variables
         self.running_status = tk.BooleanVar(value=False)
         self.connection_status = tk.StringVar(value='Unconnected')

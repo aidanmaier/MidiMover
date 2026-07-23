@@ -10,8 +10,9 @@ class MidiFrame(ttk.Frame):
         self.name = 'MIDI Settings'
         self.settings = settings
         self.options = {'sticky': 'w', 'padx':10, 'pady':(10, 5)} # widgit placement options
+
         self.default_outport_name = settings.default_outport.get()
-        self.midi_outports = []
+        self.available_outports = []
         self.selected_outport = None
         self.connection_state = False # connection state flag
         self.connected_outport = None
@@ -69,7 +70,7 @@ class MidiFrame(ttk.Frame):
             self.connect_button.config(state='normal')
         else:
             self.connect_button.config(state='disabled')
-        # Set default button logic
+        # Set Default button logic
         if self.selected_outport and self.selected_outport != self.default_outport_name:
             self.set_default_button.config(state='normal')
         else:
@@ -77,10 +78,6 @@ class MidiFrame(ttk.Frame):
 
     def _set_status(self, state: bool):
         """ Sets connection status label and button states. """
-        # Set connection status
-        if not isinstance(state, bool):
-            raise ValueError('Connection status must be a bool')
-        # Set refresh and connection button states
         connection = self.connection_state = state
         if connection:
             self.refresh_button.config(state='disabled')
@@ -190,11 +187,11 @@ class MidiFrame(ttk.Frame):
         for item in self.outports_list.get_children():
             self.outports_list.delete(item)
         # Scan for available ports
-        self.midi_outports = md.get_output_names() # type: ignore
-        if not self.midi_outports:
-            self.midi_outports = []
+        self.available_outports = md.get_output_names() # type: ignore
+        if not self.available_outports:
+            self.available_outports = []
         # Add available ports to list with default connection status
-        for connection in self.midi_outports:
+        for connection in self.available_outports:
             default_status = ''
             if connection == self.default_outport_name:
                 default_status = 'Default'
@@ -203,7 +200,7 @@ class MidiFrame(ttk.Frame):
             else:
                 self.outports_list.insert('', tk.END, values=(connection, 'Unconnected', default_status), tags=('unconnected',))
         # If default port unavailable, flag in list
-        if self.default_outport_name and self.default_outport_name not in self.midi_outports:
+        if self.default_outport_name and self.default_outport_name not in self.available_outports:
             self.outports_list.insert('', tk.END, values=(self.default_outport_name, 'Unavailable', 'Default'), tags=('unavailable',))
         # Focus on connected or default item
         self._focus_list()
