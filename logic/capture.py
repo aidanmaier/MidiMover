@@ -2,7 +2,7 @@ import time
 import asyncio
 from typing import Callable
 from zeroconf import ServiceBrowser, Zeroconf
-from logic.ws_config import WebsocketServiceListener
+from logic.listen import WebsocketServiceListener
 
 class DataStreamer():
 

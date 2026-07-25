@@ -10,10 +10,11 @@ class MidiFrame(ttk.Frame):
         self.name = 'MIDI Settings'
         self.settings = settings
         self.options = {'sticky': 'w', 'padx':10, 'pady':(10, 5)} # widgit placement options
+        self.refresh_interval = 2000 # poll rate for finding available devices (ms)
 
         self.default_outport_name = settings.default_outport.get()
         self.available_outports = []
-        self.selected_outport = None
+        self.selected_outport_name = None
         self.connection_state = False # connection state flag
         self.connected_outport = None
         self.connected_outport_name = None
@@ -24,6 +25,7 @@ class MidiFrame(ttk.Frame):
         self.columnconfigure(2, weight=1)
 
         self._create_widgets()
+        self.bind('<Destroy>', self._on_destroy)
         self._refresh_outports_list()
         
             
@@ -66,12 +68,13 @@ class MidiFrame(ttk.Frame):
         # Connection button logic
         if self.connection_state:
             self.connect_button.config(state='normal')
-        elif self.selected_outport:
+        elif self.selected_outport_name:
             self.connect_button.config(state='normal')
         else:
             self.connect_button.config(state='disabled')
+
         # Set Default button logic
-        if self.selected_outport and self.selected_outport != self.default_outport_name:
+        if self.selected_outport_name and self.selected_outport_name != self.default_outport_name:
             self.set_default_button.config(state='normal')
         else:
             self.set_default_button.config(state='disabled')
@@ -93,11 +96,11 @@ class MidiFrame(ttk.Frame):
             self._update_connection_button_states()
             
     
-    def _on_outport_select(self, event):
+    def _on_outport_select(self, event=None):
         """ Captures selected output port name. """
         selected_items = self.outports_list.selection()
         if not selected_items:
-            self.selected_outport = None
+            self.selected_outport_name = None
             self._update_connection_button_states()
             return
 
@@ -105,27 +108,30 @@ class MidiFrame(ttk.Frame):
         tags = self.outports_list.item(selected_item, 'tags')
         if 'unavailable' in tags:
             self.outports_list.selection_remove(selected_item)
-            self.selected_outport = None
+            self.selected_outport_name = None
             self._update_connection_button_states()
             return
 
         values = self.outports_list.item(selected_item, 'values')
         port_name = values[0] if values else None
-        self.selected_outport = None if port_name == None else port_name
+        self.selected_outport_name = None if port_name == None else port_name
         self._update_connection_button_states()
 
     def _on_set_default(self):
-        """ Makes the selected ouput port the new default port. """
-        self.default_outport_name = self.selected_outport # update local setting
-        self.settings.default_outport.set(self.selected_outport) # update global setting
+        """ Makes the selected MIDI output port the new default port. """
+        if not self.selected_outport_name:
+            return
+        
+        self.default_outport_name = self.selected_outport_name # update local setting
+        self.settings.default_outport.set(self.selected_outport_name) # update global setting
         self._refresh_outports_list()
 
     def _connect_outport(self):
         """ Opens connection with selected MIDI output port. """
-        self.connected_outport_name = self.selected_outport
+        self.connected_outport_name = self.selected_outport_name
         self.connected_outport = md.open_output(self.connected_outport_name) # type: ignore
         self._set_status(True) # update local setting
-        self.settings.output_connection.set(self.selected_outport) # update global setting
+        self.settings.output_connection.set(self.selected_outport_name) # update global setting
         self.settings.output_connection_status.set(True)
         self._refresh_outports_list()
         print(self.connected_outport) # DEBUG
@@ -156,9 +162,11 @@ class MidiFrame(ttk.Frame):
             """ Focuses selection on the connected or default item if present. """
             focus_name = None
             focus_item = None
-            # Prioritise connection over default
+            # Priority: connected -> selected -> default
             if self.connection_state:
                 focus_name = self.connected_outport_name
+            elif self.selected_outport_name:
+                focus_name = self.selected_outport_name
             elif self.default_outport_name:
                 focus_name = self.default_outport_name
             # Update global settings
@@ -177,7 +185,7 @@ class MidiFrame(ttk.Frame):
                 self.outports_list.selection_set(focus_item)
                 self.outports_list.focus(focus_item)
                 self.outports_list.see(focus_item)
-                self.selected_outport = self.default_outport_name
+                self.selected_outport_name = self.default_outport_name
                 self._update_connection_button_states()
                 
 
@@ -186,10 +194,12 @@ class MidiFrame(ttk.Frame):
         # Delete all list children
         for item in self.outports_list.get_children():
             self.outports_list.delete(item)
+
         # Scan for available ports
         self.available_outports = md.get_output_names() # type: ignore
         if not self.available_outports:
             self.available_outports = []
+
         # Add available ports to list with default connection status
         for connection in self.available_outports:
             default_status = ''
@@ -198,13 +208,26 @@ class MidiFrame(ttk.Frame):
             if connection == self.connected_outport_name:
                 self.outports_list.insert('', tk.END, values=(connection, 'Connected', default_status), tags=('connected',))
             else:
-                self.outports_list.insert('', tk.END, values=(connection, 'Unconnected', default_status), tags=('unconnected',))
+                self.outports_list.insert('', tk.END, values=(connection, 'Available', default_status), tags=('unconnected',))
+
         # If default port unavailable, flag in list
         if self.default_outport_name and self.default_outport_name not in self.available_outports:
             self.outports_list.insert('', tk.END, values=(self.default_outport_name, 'Unavailable', 'Default'), tags=('unavailable',))
+
         # Focus on connected or default item
         self._focus_list()
 
-    
+        # Call self after refresh interval
+        self._refresh_job = self.after(self.refresh_interval, self._refresh_outports_list)
+
+    def _on_destroy(self, event):
+        """ Cleanup handler, closes Zeroconf before closing. """
+        if event.widget is not self:
+            return
+        
+        # if self._refresh_job is not None:
+        #     self.after_cancel(self._refresh_job)
+        #     self._refresh_job = None
+        # self.zeroconf.close()
 
 
