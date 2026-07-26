@@ -27,11 +27,13 @@ def connect_device(self) -> object:
         self._connect_thread = threading.Thread(target=_run, daemon=True)
         self._connect_thread.start()
         self._refresh_devices_list()
+        print('Device connected:', connected_device, '\n') # DEBUG
 
         return connected_device
 
 def disconnect_device(self) -> None:
     """ Disconnects device and stops background connection thread. """
+    print('Device disconnected:', self.listener, '\n') # DEBUG
     self.listener.disconnect()
     if self._connect_thread and self._connect_thread.is_alive():
         self._connect_thread.join(timeout=2) # timeout for WS server to respond

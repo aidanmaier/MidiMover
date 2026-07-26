@@ -11,13 +11,15 @@ def connect_port(self) -> object:
     """ Opens connection with selected MIDI output port. """
     port_name = self.connected_device_name
     connected_outport = md.open_output(port_name) # type: ignore
+    print('MIDI connected:', connected_outport, '\n') # DEBUG
     return connected_outport
 
 def disconnect_port(self) -> None:
     """ Resets then closes active MIDI output port. """
-    port = self.connected_device
-    port.reset() # type: ignore # all notes off and reset all controllers
-    port.close() # type: ignore
+    connected_outport = self.connected_device
+    print('MIDI disconnected:', connected_outport, '\n') # DEBUG
+    connected_outport.reset() # type: ignore # all notes off and reset all controllers
+    connected_outport.close() # type: ignore
 
 class MidiFrame(ConfigFrame):
     """ GUI frame for configuring MIDI connections. """

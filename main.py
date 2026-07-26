@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
-from gui.header import StatusBar
+from gui.header_frame import Header
 from gui.device_frame import DeviceFrame
-from gui.mapping import MappingFrame
+from gui.mapping_frame import MappingFrame
 from gui.midi_frame import MidiFrame
 
 class Settings:
@@ -18,12 +18,13 @@ class Settings:
 
         # Saved settings
         self.sample_rate = tk.IntVar(value=50)
+        self.default_patch = tk.StringVar(value="Default Patch")
         self.default_device = tk.StringVar(value="SensorServer._websocket._tcp.local.")
         self.default_outport = tk.StringVar(value="IAC Driver Bus 1") # 'IAC Driver Bus 1'
 
         # Runtime variables
-        self.running_status = tk.BooleanVar(value=False)
         self.connection_status = tk.StringVar(value='Unconnected')
+        self.running_status = tk.BooleanVar(value=False)
 
         self.input_connection = tk.StringVar(value='')
         self.input_connection_name = tk.StringVar(value=self.input_disconnected_label)
@@ -32,6 +33,8 @@ class Settings:
         self.output_connection = tk.StringVar(value='')
         self.output_connection_name = tk.StringVar(value=self.output_disconnected_label)
         self.output_connection_status = tk.BooleanVar(value=False)
+
+        self.loaded_patch = tk.StringVar(value='')
 
 class Tabs(ttk.Notebook):
     """ Tabbed container for GUI frames. """
@@ -80,11 +83,12 @@ class App(tk.Tk):
         self.attributes('-topmost', 1) # always on top
 
         self._create_widgets()
+        self.tabs.select(1) # Default tab = Control Mapping
         self.protocol('WM_DELETE_WINDOW', self._on_close)
     
     def _create_widgets(self):
-        self.status = StatusBar(self, self.settings)
-        self.status.pack(padx=10, fill='x', expand=False)
+        self.status = Header(self, self.settings)
+        self.status.pack(padx=10, pady=10, fill='x', expand=False)
         self.tabs = Tabs(self, self.settings)
         self.tabs.pack(pady=10, fill='both', expand=True)
 

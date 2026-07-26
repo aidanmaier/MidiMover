@@ -20,30 +20,34 @@ class ConfigFrame(ttk.Frame):
             connection_status_var: tk.BooleanVar,
             disconnected_label: str
         ):
-        super().__init__(container)
-        self.name = name
-        self.settings = settings
-        self.device_type = device_type
-        self.get_devices = get_devices
-        self.connect_device = connect_device
-        self.disconnect_device = disconnect_device
 
-        self.options = {'sticky': 'w', 'padx':10, 'pady':(10, 5)} # widget placement options
-        self.refresh_interval = 2000 # poll rate for finding available devices (ms)
+        super().__init__(container)
 
         # Pointers to global settings
+        self.settings = settings
         self.default_device_var = default_device_var
         self.connection_var = connection_var
         self.connection_name_var = connection_name_var
         self.connection_status_var = connection_status_var
         self.disconnected_label = disconnected_label
+        self.running_status = self.settings.running_status
 
-        self.default_device = self.default_device_var.get()
+        # Local constants
+        self.name = name
+        self.device_type = device_type
+        self.get_devices = get_devices
+        self.connect_device = connect_device
+        self.disconnect_device = disconnect_device
+        self.options = {'sticky': 'w', 'padx':10, 'pady':(10, 5)} # widget placement options
+        self.refresh_interval = 2000 # poll rate for finding available devices (ms)
+
+        # Local variables
         self.available_devices = []
         self.selected_device_name = None
         self.connection_state = False # connection state flag
         self.connected_device = None
         self.connected_device_name = None
+        self.default_device = self.default_device_var.get()
 
         # Configure columns
         for i in range(2):
@@ -53,6 +57,9 @@ class ConfigFrame(ttk.Frame):
         self._create_widgets()
         self.bind('<Destroy>', self._on_destroy)
         self._refresh_devices_list()
+
+        # Manage command from global connect
+        self.running_status.trace_add('write', self._on_running_status_change)
 
     def _create_widgets(self):
         # Available MIDI devices list
@@ -153,6 +160,13 @@ class ConfigFrame(ttk.Frame):
         self.default_device = self.selected_device_name # update local setting
         self.default_device_var.set(self.selected_device_name) # update global setting
         self._refresh_devices_list()
+
+    def _on_running_status_change(self, *args):
+        running = self.running_status.get()
+        if running:
+            self._connect_device()
+        else:
+            self._disconnect_device()
 
     def _connect_device(self):
         """Opens connection with selected device."""

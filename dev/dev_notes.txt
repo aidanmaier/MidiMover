@@ -1,0 +1,7 @@
+TO DO:
+
+GUI:
+- Stack device and midi connection settings on one tabs?
+
+Connection_frame:
+- add WS port column to differentiate between multiple SensorServer instances on different devices

@@ -99,7 +99,7 @@ class WebsocketServiceListener(ServiceListener):
             'sensors': {sensor: [] for sensor in self.sensors},
         } # reset values before close
 
-        print(f'{self} disconnected') # DEBUG
+        # print(f'{self} disconnected') # DEBUG
 
         self.open = False
         self.ws_app = None
@@ -110,7 +110,7 @@ class WebsocketServiceListener(ServiceListener):
         """
         Connection confirmation message.
         """
-        print(f'{self} connected') # DEBUG
+        # print(f'{self} connected') # DEBUG
         self.open = True
 
     def connect(self, url: str) -> None:
