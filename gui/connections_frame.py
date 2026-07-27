@@ -72,6 +72,6 @@ class ConnectionsFrame(ttk.Frame):
 
     def _reset_settings(self):
         """Reset all settings to factory defaults."""
-        self.settings._factory_reset()
+        self.settings._factory_settings_reset()
 
 

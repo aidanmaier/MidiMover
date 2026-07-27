@@ -1,0 +1,55 @@
+{
+    "patches" : {
+        "< New Patch >" : {
+            "description": "A blank patch.",
+            "parameters" : {
+                "0" : {
+                    "properties" : {
+                        "name" : "Pitch",
+                        "type" : "None"
+                    },
+                    "input" : {
+                        "source" : "None",
+                        "range" : []
+                    },
+                    "output" : {
+                        "source" : "None",
+                        "range" : []
+                    }
+                },
+                "1" : {
+                    "properties" : {
+                        "name" : "Volume",
+                        "type" : "None"
+                    },
+                    "input" : {
+                        "source" : "None",
+                        "range" : []
+                    },
+                    "output" : {
+                        "source" : "None",
+                        "range" : []
+                    }
+                },
+                "2" : {
+                    "properties" : {
+                        "name" : "Cutoff",
+                        "type" : "None"
+                    },
+                    "input" : {
+                        "source" : "None",
+                        "range" : []
+                    },
+                    "output" : {
+                        "source" : "None",
+                        "range" : []
+                    }
+                }
+            }
+        },
+        "Test Patch" : {
+            "description": "A test patch",
+            "parameters" : {}
+        }
+    }
+}

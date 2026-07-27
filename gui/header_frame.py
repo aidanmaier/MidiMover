@@ -21,23 +21,23 @@ class Header(ttk.Frame):
         }
         self.default_patch = self.settings.default_patch
         self.saved_patches_list = self.settings.saved_patches_list
-        self.loaded_patch = self.settings.loaded_patch
+        self.loaded_patch_name = self.settings.loaded_patch_name
         self.tabs_visible = self.settings.tabs_visible
 
         # Local constants
         self.name = 'Quick Configuration'
         self.options = {'sticky':'w', 'padx':10, 'pady':(10, 5)} # widgit placement options
-        self.new_patch_label = '< New patch >'
+        self.new_patch_label = '< New Patch >'
 
         # Local variables
         self.ready_state = tk.StringVar(value='Unconnected')
+        self.patch_names = self.saved_patches_list
 
+        # TODO: add default patch is unavailables
+        # default_patch = self.default_patch.get()
+        # if default_patch:
+        #     self.patch_names.append(default_patch)
 
-        self.patch_names = [self.new_patch_label] # New patch always present and first item in list
-        default_patch = self.default_patch.get()
-        if default_patch:
-            self.patch_names.append(default_patch)
-        self.patch_names += (self.saved_patches_list)
         self.patch_var = tk.StringVar(value=self.patch_names[0])
         
         # Configure grid
@@ -170,7 +170,7 @@ class Header(ttk.Frame):
     def _update_load_patch_button_state(self, *args):
         """Disables patch Load and Info buttons if selected patch is already loaded."""
         selected_patch = self.patch_var.get()
-        if selected_patch == self.loaded_patch.get():
+        if selected_patch == self.loaded_patch_name.get():
             self.load_patch_button.config(state='disabled')
         else:
             self.load_patch_button.config(state='normal')
@@ -178,7 +178,8 @@ class Header(ttk.Frame):
     def _initiate_menu(self):
         """Set initial menu selection to the default patch, or new patch if no default."""
         default_patch = self.default_patch.get()
-        if default_patch:
+        saved_patches = self.saved_patches_list
+        if default_patch and default_patch in self.saved_patches_list:
             self.patch_var.set(default_patch)
         else:
             self.patch_var.set(self.new_patch_label)
@@ -194,9 +195,8 @@ class Header(ttk.Frame):
 
     def _on_load_patch_button(self):
         """Loads the patch selected in the patch menu."""
-        # TODO: patch loading logic
-        patch = self.patch_var.get()
-        self.loaded_patch.set(patch)
+        selected_patch = self.patch_var.get()
+        self.loaded_patch_name.set(selected_patch)
         self._update_load_patch_button_state()
 
     def _on_info_button(self):
