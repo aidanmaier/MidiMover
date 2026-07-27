@@ -28,6 +28,7 @@ class MidiFrame(ConfigFrame):
             container, 
             'Midi Settings', 
             settings,
+            'MIDI',
             'Port',
             get_ports, 
             connect_port, 

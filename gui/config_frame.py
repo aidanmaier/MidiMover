@@ -8,9 +8,10 @@ class ConfigFrame(ttk.Frame):
     def __init__(
             self, 
             container, 
-            name,
+            name: str,
             settings, 
-            device_type,
+            connection_type: str,
+            device_type: str,
             get_devices: Callable, 
             connect_device: Callable, 
             disconnect_device: Callable,
@@ -34,11 +35,12 @@ class ConfigFrame(ttk.Frame):
 
         # Local constants
         self.name = name
+        self.connection_type = connection_type
         self.device_type = device_type
         self.get_devices = get_devices
         self.connect_device = connect_device
         self.disconnect_device = disconnect_device
-        self.options = {'sticky': 'w', 'padx':10, 'pady':(10, 5)} # widget placement options
+        self.options = {'sticky': 'w', 'padx':10, 'pady':5} # widget placement options
         self.refresh_interval = 2000 # poll rate for finding available devices (ms)
 
         # Local variables
@@ -63,12 +65,18 @@ class ConfigFrame(ttk.Frame):
 
     def _create_widgets(self):
         # Available MIDI devices list
-        self.devices_label = ttk.Label(self, text='Available Devices:')
+        self.devices_label = ttk.Label(self, text=f'{self.connection_type} {self.device_type}s:')
         self.devices_label.grid(column=0, row=0, **self.options)
 
-        self.refresh_button = ttk.Button(self, text='Refresh', command=self._refresh_devices_list)
-        self.refresh_button.grid(column=1, row=0, sticky='e', padx=0, pady=(10, 5))
+        # Connection buttons
+        self.connection_buttons_frame = ttk.Frame(self)
+        self.connection_buttons_frame.grid(column=1, row=0, sticky='e', padx=0, pady=0)
+        self.connect_button = ttk.Button(self.connection_buttons_frame, text='Connect', state='disabled', command=self._connect_device)
+        self.connect_button.grid(column=0, row=0, **self.options)
+        self.set_default_button = ttk.Button(self.connection_buttons_frame, text=f'Set Default {self.device_type}', state='disabled', command=self._on_set_default)
+        self.set_default_button.grid(column=1, row=0, sticky='e', padx=0, pady=5)
 
+        # Devices list
         self.devices_list = ttk.Treeview(self, columns=('device','status', 'default'), show='headings', height=6, selectmode='browse')
         self.devices_list.heading('device', text=f'{self.device_type} Name')
         self.devices_list.column('device', width=200, anchor='w')
@@ -88,12 +96,6 @@ class ConfigFrame(ttk.Frame):
         self.devices_list.tag_configure('unconnected', foreground='blue')
         self.devices_list.tag_configure('connected', foreground='green')
         self.devices_list.tag_configure('unavailable', foreground='red')
-        
-        # Connection buttons
-        self.connect_button = ttk.Button(self, text='Connect', state='disabled', command=self._connect_device)
-        self.connect_button.grid(column=0, row=3, **self.options)
-        self.set_default_button = ttk.Button(self, text=f'Set as Default {self.device_type}', state='disabled', command=self._on_set_default)
-        self.set_default_button.grid(column=1, row=3, sticky='e', padx=0, pady=(10, 5))
 
     def _update_connection_button_states(self):
         """Updates connection and default button states based on selection and connection."""
@@ -115,12 +117,12 @@ class ConfigFrame(ttk.Frame):
         """Sets connection status label and button states."""
         connection = self.connection_state = state
         if connection:
-            self.refresh_button.config(state='disabled')
+            # self.refresh_button.config(state='disabled')
             self.connect_button.config(text='Disconnect', command=self._disconnect_device)
             self.devices_list.config(selectmode='none')
             self._update_connection_button_states()
         else:
-            self.refresh_button.config(state='normal')
+            # self.refresh_button.config(state='normal')
             self.connect_button.config(text='Connect', command=self._connect_device)
             self.devices_list.config(selectmode='browse')
             self.connected_device = None
@@ -144,10 +146,6 @@ class ConfigFrame(ttk.Frame):
             self.selected_device_name = None
             self._update_connection_button_states()
             return
-
-        # values = self.devices_list.item(selected_item, 'values')
-        # device_name = values[0] if values else None
-        # self.selected_device_name = None if device_name == None else device_name
 
         self.selected_device_name = selected_item
 

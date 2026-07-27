@@ -1,40 +1,9 @@
 import tkinter as tk
 from tkinter import ttk
+from gui.settings import Settings
 from gui.header_frame import Header
-from gui.device_frame import DeviceFrame
-from gui.mapping_frame import MappingFrame
-from gui.midi_frame import MidiFrame
-
-class Settings:
-    """ Shared config for global settings. """
-    # Settings object passed to all gui components so all variables are settable
-    # tk variables refire when updated
-    def __init__(self):
-        # Constants
-        self.ws_address = '_websocket._tcp.local.'
-        self.sensors = ['rotation_vector', 'linear_acceleration']
-        self.input_disconnected_label = '< Connect Device >'
-        self.output_disconnected_label = '< Connect MIDI Port >'
-
-        # Saved settings
-        self.sample_rate = tk.IntVar(value=50)
-        self.default_patch = tk.StringVar(value="Default Patch")
-        self.default_device = tk.StringVar(value="SensorServer._websocket._tcp.local.")
-        self.default_outport = tk.StringVar(value="IAC Driver Bus 1") # 'IAC Driver Bus 1'
-
-        # Runtime variables
-        self.connection_status = tk.StringVar(value='Unconnected')
-        self.running_status = tk.BooleanVar(value=False)
-
-        self.input_connection = tk.StringVar(value='')
-        self.input_connection_name = tk.StringVar(value=self.input_disconnected_label)
-        self.input_connection_status = tk.BooleanVar(value=False)
-
-        self.output_connection = tk.StringVar(value='')
-        self.output_connection_name = tk.StringVar(value=self.output_disconnected_label)
-        self.output_connection_status = tk.BooleanVar(value=False)
-
-        self.loaded_patch = tk.StringVar(value='')
+from gui.controls_frame import ControlsFrame
+from gui.connections_frame import ConnectionsFrame
 
 class Tabs(ttk.Notebook):
     """ Tabbed container for GUI frames. """
@@ -47,11 +16,10 @@ class Tabs(ttk.Notebook):
         self.bind('<<NotebookTabChanged>>', self._on_tab_changed)
     
     def _create_widgets(self):
-        self.device_frame = DeviceFrame(self, self.settings)
-        self.mapping_frame = MappingFrame(self, self.settings)
-        self.midi_frame = MidiFrame(self, self.settings)
+        self.controls = ControlsFrame(self, self.settings)
+        self.connections = ConnectionsFrame(self, self.settings)
         
-        for frame in [self.device_frame, self.mapping_frame, self.midi_frame]:
+        for frame in [self.controls, self.connections]:
             self.add(frame, text=frame.name)
     
     def _on_tab_changed(self, event):
@@ -65,15 +33,16 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.settings = Settings()
+        self.tabs_visible = self.settings.tabs_visible
 
         # Configure root window
-        self.title('Motion Controller')
+        self.title('MidiMotion')
 
         # Center window
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
         window_width = 600
-        window_height = 600
+        window_height = 620
         offset_x = int(screen_width/2 - window_width/2) # distance to screen center - distance to window center
         offset_y = int(screen_height/2 - window_height/2)         
 
@@ -83,20 +52,36 @@ class App(tk.Tk):
         self.attributes('-topmost', 1) # always on top
 
         self._create_widgets()
-        self.tabs.select(1) # Default tab = Control Mapping
+        self.tabs.select(0) # Default tab = Controls
         self.protocol('WM_DELETE_WINDOW', self._on_close)
+
+        # Handle toggle button state (in header)
+        self.tabs_visible.trace_add('write', self._on_toggle_button)
     
     def _create_widgets(self):
+        # Quick config
         self.status = Header(self, self.settings)
         self.status.pack(padx=10, pady=10, fill='x', expand=False)
+
+        # Details tabs
         self.tabs = Tabs(self, self.settings)
         self.tabs.pack(pady=10, fill='both', expand=True)
+
+    def _on_toggle_button(self, *args):
+        """Hides or shows tabs based on toggle state."""
+        expanded = self.tabs_visible.get()
+        if not expanded:
+            self.tabs.pack_forget() # does not detroy object so states are not lost
+            self.geometry('600x120') # collapse window height
+        else:
+            self.tabs.pack(padx=10, pady=(0, 10), fill='both', expand=True)
+            self.geometry('600x620') # restore window height 
 
     def _on_close(self):
         """ Cleanup handler before window closes. """
         # Close any open connections
-        self.tabs.device_frame._disconnect_device()
-        self.tabs.midi_frame._disconnect_device()
+        self.tabs.connections.device_frame._disconnect_device()
+        self.tabs.connections.midi_frame._disconnect_device()
 
         # Stop stream
         if self.settings.running_status.get():

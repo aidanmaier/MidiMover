@@ -1,7 +1,11 @@
 TO DO:
 
 GUI:
-- Stack device and midi connection settings on one tabs?
+- Stack device and midi connection settings on one Connections tab X
+- Add Settings tab for settings config X
+- Add toggle to minimise window to only Quick Config
+- Move sample rate and ws_address settings to Connections tab and remove Settings tab
 
 Connection_frame:
 - add WS port column to differentiate between multiple SensorServer instances on different devices
+- when default device selected, change Set Default button to Remove Default

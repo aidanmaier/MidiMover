@@ -20,7 +20,9 @@ class Header(ttk.Frame):
              'disconnected_label': self.settings.output_disconnected_label             
         }
         self.default_patch = self.settings.default_patch
+        self.saved_patches_list = self.settings.saved_patches_list
         self.loaded_patch = self.settings.loaded_patch
+        self.tabs_visible = self.settings.tabs_visible
 
         # Local constants
         self.name = 'Quick Configuration'
@@ -29,14 +31,13 @@ class Header(ttk.Frame):
 
         # Local variables
         self.ready_state = tk.StringVar(value='Unconnected')
-        
-        # TODO: replace with real pacth names/source once available
-        self.patch_names = [
-            self.new_patch_label, # Always present and first item in list
-            'patch 1', 
-            self.default_patch.get(), 
-            'patch 2'
-            ]
+
+
+        self.patch_names = [self.new_patch_label] # New patch always present and first item in list
+        default_patch = self.default_patch.get()
+        if default_patch:
+            self.patch_names.append(default_patch)
+        self.patch_names += (self.saved_patches_list)
         self.patch_var = tk.StringVar(value=self.patch_names[0])
         
         # Configure grid
@@ -69,8 +70,8 @@ class Header(ttk.Frame):
         self._update_start_button_state()
 
         # Manage patch button states
-        self.patch_var.trace_add('write', self._update_patch_buttons_state)
-        self._update_patch_buttons_state()
+        self.patch_var.trace_add('write', self._update_load_patch_button_state)
+        self._update_load_patch_button_state()
 
     def _create_widgets(self):
         # Start/Stop button, status icon and label
@@ -88,16 +89,20 @@ class Header(ttk.Frame):
         self.start_button.grid(column=0, row=1, **self.options)
 
         # Input information
-        self.input_label = ttk.Label(self, text='Device:')
-        self.input_label.grid(column=1, row=0, **self.options)
-        self.input_status_label = ttk.Label(self, textvariable=self.settings.input_connection_name)
-        self.input_status_label.grid(column=2, row=0, **self.options)
+        self.input_frame = ttk.Frame(self)
+        self.input_frame.grid(column=1, row=0, columnspan=2, sticky='w', padx=5)
+        self.input_label = ttk.Label(self.input_frame, text='Device:')
+        self.input_label.grid(column=0, row=0, sticky='w', padx=5, pady=(10, 5))
+        self.input_status_label = ttk.Label(self.input_frame, textvariable=self.settings.input_connection_name)
+        self.input_status_label.grid(column=1, row=0, sticky='w', padx=0, pady=(10, 5))
 
         # Output information
-        self.output_label = ttk.Label(self, text='MIDI Port:')
-        self.output_label.grid(column=3, row=0, **self.options)
-        self.output_status_label = ttk.Label(self, textvariable=self.settings.output_connection_name)
-        self.output_status_label.grid(column=4, row=0, **self.options)
+        self.output_frame = ttk.Frame(self)
+        self.output_frame.grid(column=3, row=0, columnspan=2, sticky='w', padx=5)
+        self.output_label = ttk.Label(self.output_frame, text='MIDI Port:')
+        self.output_label.grid(column=0, row=0, sticky='w', padx=5, pady=(10, 5))
+        self.output_status_label = ttk.Label(self.output_frame, textvariable=self.settings.output_connection_name)
+        self.output_status_label.grid(column=1, row=0, sticky='w', padx=0, pady=(10, 5))
 
         # Load patchs
         self.patch_menu = ttk.OptionMenu(
@@ -109,9 +114,9 @@ class Header(ttk.Frame):
         self.patch_menu.grid(column=1, row=1, columnspan=2, sticky='ew', padx=10, pady=(10, 5))
 
         self.load_patch_button = ttk.Button(self, text='Load', command=self._on_load_patch_button)
-        self.load_patch_button.grid(column=3, row=1, **self.options)
-        self.patch_info_button = ttk.Button(self, text='Info', command=self._on_patch_info_button)
-        self.patch_info_button.grid(column=4, row=1, **self.options)
+        self.load_patch_button.grid(column=3, row=1, sticky='w', padx=10, pady=(10, 5))
+        self.info_button = ttk.Button(self, text='Hide Info', command=self._on_info_button)
+        self.info_button.grid(column=4, row=1, sticky='e', padx=(10, 20), pady=(10, 5))
 
     def _create_status_tracer(self, variable: tk.Variable, label: ttk.Label, **global_settings) -> None:
             """Creates a global variable tracer assigns it to a label, and passes it a Dict of arguments"""
@@ -141,7 +146,7 @@ class Header(ttk.Frame):
         # Set status icon color
         if running:
             icon_color = 'green'
-            self.ready_state.set('Connected')
+            self.ready_state.set('Running')
         elif ready:
             icon_color = 'blue'
             self.ready_state.set('Ready')
@@ -162,19 +167,13 @@ class Header(ttk.Frame):
                 self.start_button.config(text='START')
                 return
 
-    def _update_patch_buttons_state(self, *args):
+    def _update_load_patch_button_state(self, *args):
         """Disables patch Load and Info buttons if selected patch is already loaded."""
         selected_patch = self.patch_var.get()
         if selected_patch == self.loaded_patch.get():
             self.load_patch_button.config(state='disabled')
-            self.patch_info_button.config(state='disabled')
         else:
             self.load_patch_button.config(state='normal')
-            self.patch_info_button.config(state='normal')
-
-        # Cannot read info about a new patch
-        if selected_patch == self.new_patch_label:
-            self.patch_info_button.config(state='disabled')
 
     def _initiate_menu(self):
         """Set initial menu selection to the default patch, or new patch if no default."""
@@ -198,10 +197,17 @@ class Header(ttk.Frame):
         # TODO: patch loading logic
         patch = self.patch_var.get()
         self.loaded_patch.set(patch)
-        self._update_patch_buttons_state()
+        self._update_load_patch_button_state()
 
-    def _on_patch_info_button(self):
-        pass
+    def _on_info_button(self):
+        """Toggles tabs_visible variable."""
+        expanded = self.tabs_visible.get()
+        if expanded:
+            self.info_button.config(text='Show Info')
+            self.tabs_visible.set(False)
+        else:
+            self.info_button.config(text='Hide Info')
+            self.tabs_visible.set(True)
 
 
             

@@ -60,6 +60,7 @@ class DeviceFrame(ConfigFrame):
             container, 
             'Connect Device',
             settings, 
+            'Input',
             'Device', 
             get_devices,
             connect_device, 

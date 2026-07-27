@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 
-class MappingFrame(ttk.Frame):
+class ControlsFrame(ttk.Frame):
     def __init__(self, container, settings):
         super().__init__(container)
 
@@ -11,7 +11,7 @@ class MappingFrame(ttk.Frame):
         self.loaded_patch = self.settings.loaded_patch
 
         # Local constants
-        self.name = 'Control Mapping'
+        self.name = 'Controls'
         self.options = {'sticky':'w', 'padx':10, 'pady':(10, 5)} # widgit placement options
 
         # Local variables
@@ -28,7 +28,7 @@ class MappingFrame(ttk.Frame):
     
     def _create_widgets(self):
         # Patch info
-        self.patch_name_label = ttk.Label(self, text='Patch name:')
+        self.patch_name_label = ttk.Label(self, text='Active patch:')
         self.patch_name_label.grid(column=0, row=0, **self.options)
         self.patch_name = ttk.Label(self, textvariable=self.loaded_patch)
         self.patch_name.grid(column=1, row=0, sticky='ew', padx=10, pady=(10, 5))
