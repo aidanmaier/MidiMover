@@ -1,9 +1,16 @@
 import tkinter as tk
 from tkinter import ttk
-from gui.settings import Settings
+from pathlib import Path
+from gui.settings_object import Settings
 from gui.header_frame import Header
 from gui.controls_frame import ControlsFrame
 from gui.connections_frame import ConnectionsFrame
+
+# Filepaths
+BASE_DIR = Path(__file__).resolve().parent
+DATA_FOLDER = BASE_DIR / "app_data"
+SETTINGS_FILEPATH = DATA_FOLDER / "settings.json"
+PATCHES_FILEPATH = DATA_FOLDER / "patches.json"
 
 class Tabs(ttk.Notebook):
     """ Tabbed container for GUI frames. """
@@ -32,7 +39,7 @@ class Tabs(ttk.Notebook):
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.settings = Settings()
+        self.settings = Settings(SETTINGS_FILEPATH, PATCHES_FILEPATH)
         self.tabs_visible = self.settings.tabs_visible
 
         # Configure root window
@@ -43,8 +50,8 @@ class App(tk.Tk):
         screen_height = self.winfo_screenheight()
         window_width = 600
         window_height = 620
-        offset_x = int(screen_width/2 - window_width/2) # distance to screen center - distance to window center
-        offset_y = int(screen_height/2 - window_height/2)         
+        offset_x = (screen_width - window_width) // 2 # distance to screen center - distance to window center
+        offset_y = (screen_height - window_height) // 2         
 
         # Window size
         self.geometry(f'{window_width}x{window_height}+{offset_x}+{offset_y}')

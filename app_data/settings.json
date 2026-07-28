@@ -7,11 +7,8 @@
     "input_disconnected_label": "< Connect Device >",
     "output_disconnected_label": "< Connect MIDI Port >",
     "default_sample_rate": 50,
-    "default_patch": "Default Patch",
-    "saved_patches_list": [
-        "Patch 1",
-        "Patch 2"
-    ],
+    "default_patch": "Test Patch",
+    "saved_patches_list": [],
     "default_device": "SensorServer._websocket._tcp.local.",
     "default_outport": "IAC Driver Bus 1"
 }

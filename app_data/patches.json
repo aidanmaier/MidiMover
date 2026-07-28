@@ -4,52 +4,71 @@
             "description": "A blank patch.",
             "parameters" : {
                 "0" : {
-                    "properties" : {
-                        "name" : "Pitch",
-                        "type" : "None"
-                    },
-                    "input" : {
-                        "source" : "None",
-                        "range" : []
-                    },
-                    "output" : {
-                        "source" : "None",
-                        "range" : []
-                    }
+                    "input" : null,
+                    "input_range" : [],
+                    "output" : null,
+                    "output_range" : []
                 },
                 "1" : {
-                    "properties" : {
-                        "name" : "Volume",
-                        "type" : "None"
-                    },
-                    "input" : {
-                        "source" : "None",
-                        "range" : []
-                    },
-                    "output" : {
-                        "source" : "None",
-                        "range" : []
-                    }
+                    "input" : null,
+                    "input_range" : [],
+                    "output" : null,
+                    "output_range" : []
                 },
                 "2" : {
-                    "properties" : {
-                        "name" : "Cutoff",
-                        "type" : "None"
-                    },
-                    "input" : {
-                        "source" : "None",
-                        "range" : []
-                    },
-                    "output" : {
-                        "source" : "None",
-                        "range" : []
-                    }
+                    "input" : null,
+                    "input_range" : [],
+                    "output" : null,
+                    "output_range" : []
+                },
+                "3" : {
+                    "input" : null,
+                    "input_range" : [],
+                    "output" : null,
+                    "output_range" : []
+                },
+                "4" : {
+                    "input" : null,
+                    "input_range" : [],
+                    "output" : null,
+                    "output_range" : []
                 }
             }
         },
         "Test Patch" : {
-            "description": "A test patch",
-            "parameters" : {}
+            "description": "A test patch lorem ipsum lorem ipsum lorem ipsum lorem ipsum.",
+            "parameters" : {
+                "0" : {
+                    "input" : "Speed",
+                    "input_range" : [23, 86],
+                    "output" : "Volume",
+                    "output_range" : [12, 90]
+                },
+                "1" : {
+                    "input" : "Pitch",
+                    "input_range" : [1, 10],
+                    "output" : "Cutoff",
+                    "output_range" : [67, 87]
+                },
+                "2" : {
+                    "input" : "Yaw",
+                    "input_range" : [0, 100],
+                    "output" : "Note",
+                    "output_range" : [0, 100]
+                },
+                "3" : {
+                    "input" : "Roll",
+                    "input_range" : [0, 100],
+                    "output" : "Res",
+                    "output_range" : [0, 100]
+                },
+                "4" : {
+                    "input" : null,
+                    "input_range" : [0, 100],
+                    "output" : null,
+                    "output_range" : [0, 100]
+                }
+            }
         }
     }
 }

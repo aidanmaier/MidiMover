@@ -2,15 +2,6 @@ import tkinter as tk
 import os
 import json
 
-# Filepaths
-DATA_FOLDER_FILEPATH = './app_data/'
-
-SETTINGS_FILENAME = 'settings.json'
-SETTINGS_FILEPATH = DATA_FOLDER_FILEPATH + SETTINGS_FILENAME
-
-PATCHES_FILENAME = 'patches.json'
-PATCHES_FILEPATH = DATA_FOLDER_FILEPATH + PATCHES_FILENAME
-
 # Hardcoded backup defaults, immutable from within app
 FACTORY_SETTINGS = {
     "ws_address" : "_websocket._tcp.local.",
@@ -18,9 +9,8 @@ FACTORY_SETTINGS = {
     "input_disconnected_label" : "< Connect Device >",
     "output_disconnected_label" : "< Connect MIDI Port >",
     "default_sample_rate" : 50,
-
     "default_patch" : "Default Patch",
-    "saved_patches_list" : ["Patch 1", "Patch 2"],
+    "saved_patches_list" : [],
     "default_device" : "SensorServer._websocket._tcp.local.",
     "default_outport" : "IAC Driver Bus 1"
 }
@@ -31,46 +21,22 @@ FACTORY_PATCHES = {
             "description": "A blank patch.",
             "parameters" : {
                 "0" : {
-                    "properties" : {
-                        "name" : "Pitch",
-                        "type" : "None"
-                    },
-                    "input" : {
-                        "source" : "None",
-                        "range" : []
-                    },
-                    "output" : {
-                        "source" : "None",
-                        "range" : []
-                    }
+                    "input" : None,
+                    "input_range" : [],
+                    "output" : None,
+                    "output_range" : []
                 },
                 "1" : {
-                    "properties" : {
-                        "name" : "Volume",
-                        "type" : "None"
-                    },
-                    "input" : {
-                        "source" : "None",
-                        "range" : []
-                    },
-                    "output" : {
-                        "source" : "None",
-                        "range" : []
-                    }
+                    "input" : None,
+                    "input_range" : [],
+                    "output" : None,
+                    "output_range" : []
                 },
                 "2" : {
-                    "properties" : {
-                        "name" : "Cutoff",
-                        "type" : "None"
-                    },
-                    "input" : {
-                        "source" : "None",
-                        "range" : []
-                    },
-                    "output" : {
-                        "source" : "None",
-                        "range" : []
-                    }
+                    "input" : None,
+                    "input_range" : [],
+                    "output" : None,
+                    "output_range" : []
                 }
             }
         }
@@ -81,15 +47,20 @@ class Settings:
     """Shared config for global settings."""
     # Settings object passed to all gui components so all variables are settable locally
     # tk variables refire when updated
-    def __init__(self):
+    def __init__(self, settings_filepath, patches_filepath):
+        self.settings_filepath = settings_filepath
+        self.patches_filepath = patches_filepath
 
         self.saved_settings = self._load_settings()
         s = self.saved_settings
 
-        self.saved_patches = self._load_patches()
-        p = self.saved_patches
+        self.saved_patches_data = self._load_patches()
+        p = self.saved_patches_data
 
         # Immutable app settings
+        self.input_parameter_types = ['Speed', 'Pitch', 'Yaw', 'Roll', 'Width', 'Height', 'Depth']
+        self.output_parameter_types = ['Note', 'Volume', 'Res', 'Cutoff']
+
         self.ws_address = FACTORY_SETTINGS['ws_address']
         self.sensors = FACTORY_SETTINGS['sensors']
         self.input_disconnected_label = FACTORY_SETTINGS['input_disconnected_label']
@@ -118,27 +89,29 @@ class Settings:
         self.output_connection_status = tk.BooleanVar(value=False)
 
         self.loaded_patch_name = tk.StringVar(value='')
-
-    def _load_settings(self) -> dict:
-        """Loads settings from disk, creating a file from factory settings if missing."""
-        # create directory and new settings file if missing
-        if not os.path.exists(SETTINGS_FILEPATH):
-            os.makedirs(os.path.dirname(SETTINGS_FILEPATH), exist_ok=True) 
-            with open(SETTINGS_FILEPATH, 'w') as OUTFILE:
-                json.dump(FACTORY_SETTINGS, OUTFILE, indent=4)
-            return dict(FACTORY_SETTINGS)
-        else:
-            with open(SETTINGS_FILEPATH, 'r') as INFILE:
-                return json.load(INFILE)
+        self.loaded_patch_description = tk.StringVar(value='')
+        self.loaded_patch_parameters_data = {}
 
     def _save_settings(self, data: dict) -> None:
         """Writes settings to disk and saved_settings variable."""
 
-        os.makedirs(os.path.dirname(SETTINGS_FILEPATH), exist_ok=True)  # create directory if does not exist
-        with open(SETTINGS_FILEPATH, 'w') as OUTFILE:
+        os.makedirs(os.path.dirname(self.settings_filepath), exist_ok=True)  # create directory if does not exist
+        with open(self.settings_filepath, 'w') as OUTFILE:
             json.dump(data, OUTFILE, indent=4)
-            
-        self.saved_settings = data
+
+    def _load_settings(self) -> dict:
+        """Loads settings from disk, creating a file from factory settings if missing."""
+        # create directory and new settings file if missing
+        if not os.path.exists(self.settings_filepath):
+            self._save_settings(FACTORY_SETTINGS)
+            return dict(FACTORY_SETTINGS)
+        
+        try:
+            with open(self.settings_filepath, 'r') as INFILE:
+                return json.load(INFILE)
+        except (json.JSONDecodeError, OSError):
+            self._save_settings(FACTORY_SETTINGS)
+            return dict(FACTORY_SETTINGS)
 
     def _save_current_settings(self) -> None:
         """Writes current settings to disk and saved_settings variable."""
@@ -155,6 +128,7 @@ class Settings:
         }
 
         self._save_settings(data)
+        self.saved_settings = data
 
     def _factory_settings_reset(self) -> None:
         """Resets all settings to factory defaults."""
@@ -165,13 +139,13 @@ class Settings:
     def _load_patches(self) -> dict:
         """Loads patches from disk, creating a file from factory patches if missing."""
         # create directory and new patches file if missing
-        if not os.path.exists(PATCHES_FILEPATH):
-            os.makedirs(os.path.dirname(PATCHES_FILEPATH), exist_ok=True) 
-            with open(PATCHES_FILEPATH, 'w') as OUTFILE:
+        if not os.path.exists(self.patches_filepath):
+            os.makedirs(os.path.dirname(self.patches_filepath), exist_ok=True) 
+            with open(self.patches_filepath, 'w') as OUTFILE:
                 json.dump(FACTORY_PATCHES, OUTFILE, indent=4)
             return dict(FACTORY_PATCHES)
         else:
-            with open(PATCHES_FILEPATH, 'r') as INFILE:
+            with open(self.patches_filepath, 'r') as INFILE:
                 return json.load(INFILE)
 
     def _save_patch(self) -> None:

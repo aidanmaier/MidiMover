@@ -14,7 +14,7 @@ class ConnectionsFrame(ttk.Frame):
         self.running_status = self.settings.running_status
 
         # Local constants
-        self.name = 'Settings'
+        self.name = 'Connections'
 
         self._create_widgets()
 
@@ -54,6 +54,8 @@ class ConnectionsFrame(ttk.Frame):
         self.sample_rate_label.pack(side='left')
         self.sample_rate_spinbox = ttk.Spinbox(self.connection_settings_frame)
         self.sample_rate_spinbox.pack(side='left', fill='none')
+        self.hz_label = ttk.Label(self.connection_settings_frame, text='Sample Rate:')
+        self.hz_label.pack(side='left')
 
     def _update_connections_settings_state(self, *args):
         """Disables connectinos settings controls if running."""
