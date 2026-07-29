@@ -1,3 +1,5 @@
+import time
+import asyncio
 import json
 import socket
 import websocket
@@ -5,15 +7,14 @@ from typing import Any, Callable
 from zeroconf import ServiceListener, Zeroconf
 
 class WebsocketServiceListener(ServiceListener):
-
+    """
+    Initiates zero-config Websocket connection with SensorStreamer and listens for streamed sensor data. 
+    
+    Parameters: 
+    sensors (list of strings): list of Android sensor types to access, must contain two or more items.
+    on_disconnect (callable function): cleanup function which passes disconnection cause back to the main thread.
+    """
     def __init__(self, sensors: list[str], on_disconnect: Callable) -> None:
-        """
-        Initiates zero-config Websockes connection with SensorStreamer and listens for streamed sensor data. 
-        
-        Parameters: 
-        sensors (list of strings): list of Android sensor types to access, must contain two or more items.
-        on_disconnect (callable function): cleanup function which passes disconnection cause back to the main thread.
-        """
         super().__init__()
 
         # Handle sensors value
@@ -49,7 +50,6 @@ class WebsocketServiceListener(ServiceListener):
         Callback function which loads latest sensor data from API and stores it at self.latest_values.
         Messages are per individual sensor change, not batched.
         """
-
         # Load JSON from API
         try:
             msg = json.loads(message)
@@ -171,3 +171,43 @@ class WebsocketServiceListener(ServiceListener):
                     'address': addresses[0],
                     'port': info.port,
                 }
+
+
+class DataStreamer():
+    """Streams data from WebSocketServiceListener."""
+    def __init__(self, listener: WebsocketServiceListener) -> None:
+        self.listener = listener
+    
+    async def stream(self, callback: Callable, sample_rate: int, stop_event: asyncio.Event | None = None) -> None:
+        """
+        Streams input data at given sample_rate data and triggers the callback function for each sample.
+
+        Parameters:
+        callback (Callable): callback function triggered once per sample
+        sample_rate (int): sampling rate in Hz
+        """
+
+        # Capture Loop running at sample rate (Hz)
+        stream = True
+        sample_period = 1 / sample_rate # sample period in seconds
+        next_time = time.monotonic() # start forward-only clock
+    
+        while stream:
+            if stop_event is not None and stop_event.is_set():
+                break
+
+            if not self.listener.open:
+                stream = False
+                break
+
+            sample = self.listener.get_values()
+
+            if sample['timestamp']:
+                callback(sample)
+
+            # Normalise loop length to sample_period
+            next_time += sample_period # ideal sample period length
+            delay = next_time - time.monotonic() # remainder after subtracting elapsed time
+            # print(f'Sample period: {delay} s, Sample rate: {1 / delay}') #DEBUG
+            if delay > 0:
+                await asyncio.sleep(delay) # wait for duration of remainder 

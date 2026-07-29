@@ -214,6 +214,7 @@ class ControlsFrame(ttk.Frame):
 
         # Populate dropdown values now that all rows/selections exist
         self._refresh_available_types()
+        self.patch_altered.set(False)
 
     def _on_type_selected(self) -> None:
         """Called when a parameter-type combobox selection changes."""

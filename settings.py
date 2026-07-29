@@ -61,10 +61,10 @@ class Settings:
         self.input_parameter_types = ['Speed', 'Pitch', 'Yaw', 'Roll', 'Width', 'Height', 'Depth']
         self.output_parameter_types = ['Note', 'Volume', 'Res', 'Cutoff']
 
-        self.ws_address = FACTORY_SETTINGS['ws_address']
-        self.sensors = FACTORY_SETTINGS['sensors']
-        self.input_disconnected_label = FACTORY_SETTINGS['input_disconnected_label']
-        self.output_disconnected_label = FACTORY_SETTINGS['output_disconnected_label']
+        self.ws_address: str = FACTORY_SETTINGS['ws_address']
+        self.sensors: list[str] = FACTORY_SETTINGS['sensors']
+        self.input_disconnected_label: str = FACTORY_SETTINGS['input_disconnected_label']
+        self.output_disconnected_label: str = FACTORY_SETTINGS['output_disconnected_label']
 
         # User settings, load factory setting if missing
         self.default_sample_rate = s.get('default_sample_rate', FACTORY_SETTINGS['default_sample_rate'])

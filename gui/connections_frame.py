@@ -6,7 +6,7 @@ from gui.midi_frame import MidiFrame
 class ConnectionsFrame(ttk.Frame):
     """GUI container for input and output connection configuration."""
 
-    def __init__(self, container, settings):
+    def __init__(self, container, settings, listener):
         super().__init__(container)
 
         # Pointers to global settings
@@ -15,6 +15,7 @@ class ConnectionsFrame(ttk.Frame):
 
         # Local constants
         self.name = 'Connections'
+        self.listener = listener
 
         self._create_widgets()
 
@@ -25,7 +26,7 @@ class ConnectionsFrame(ttk.Frame):
 
     def _create_widgets(self):
         # Device connections
-        self.device_frame = DeviceFrame(self, self.settings)
+        self.device_frame = DeviceFrame(self, self.settings, self.listener)
         self.device_frame.pack(fill='x', pady=(5, 0))
 
         # Separate device and midi connections
