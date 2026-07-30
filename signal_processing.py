@@ -1,6 +1,8 @@
 import numpy as np
-from math import hypot
+import math
 from scipy.spatial.transform import Rotation
+
+# Acceleration processing
 
 def calculate_world_acceleration(rotation_vector: list[float], linear_acceleration: list[float]) -> list[float]:
     """
@@ -101,7 +103,7 @@ def calculate_magnitude(vector: list[float]) -> float:
     # Calculate hypotenuse from vector
     x, y, z = vector
 
-    return hypot(x, y, z)
+    return math.hypot(x, y, z)
 
 
 class MagnitudeZuptTracker:
@@ -172,3 +174,28 @@ class MagnitudeZuptTracker:
             self.distance_traveled += self.speed * dt
             
             return (self.distance_traveled, self.speed, self.is_stationary)
+
+# Rotation processing
+
+def quaternion_to_euler(q: list[float]) -> tuple[float, float, float]:
+    """Converts Android rotation vector quaternion [x, y, z, w] to Euler angles (pitch, roll, yaw)."""
+    x, y, z, w = q[0], q[1], q[2], q[3] if len(q) > 3 else 0.0
+    
+    # Calculate Roll (x-axis rotation)
+    sinr_cosp = 2 * (w * x + y * z)
+    cosr_cosp = 1 - 2 * (x * x + y * y)
+    roll = math.atan2(sinr_cosp, cosr_cosp)
+
+    # Calculate Pitch (y-axis rotation)
+    sinp = 2 * (w * y - z * x)
+    if abs(sinp) >= 1:
+        pitch = math.copysign(math.pi / 2, sinp) # Use 90 deg if out of range
+    else:
+        pitch = math.asin(sinp)
+
+    # Calculate Yaw (z-axis rotation)
+    siny_cosp = 2 * (w * z + x * y)
+    cosy_cosp = 1 - 2 * (y * y + z * z)
+    yaw = math.atan2(siny_cosp, cosy_cosp)
+
+    return (pitch, roll, yaw)

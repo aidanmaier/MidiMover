@@ -9,7 +9,7 @@ from gui.header_frame import Header
 from gui.controls_frame import ControlsFrame
 from gui.connections_frame import ConnectionsFrame
 from input import WebsocketServiceListener, DataStreamer
-from player import Player
+from output import MidiOut, MidiPlayer
 
 # Filepaths
 BASE_DIR = Path(__file__).resolve().parent
@@ -17,24 +17,21 @@ DATA_FOLDER = BASE_DIR / "app_data"
 SETTINGS_FILEPATH = DATA_FOLDER / "settings.json"
 PATCHES_FILEPATH = DATA_FOLDER / "patches.json"
 
-# Callback function
-def print_sample(sample):
-    print(sample)
-
 class Tabs(ttk.Notebook):
     """ Tabbed container for GUI frames. """
 
-    def __init__(self, container, settings, listener):
+    def __init__(self, container, settings, listener: WebsocketServiceListener, midi_out: MidiOut):
         super().__init__(container)
         self.settings = settings
-        self.listener: WebsocketServiceListener = listener
+        self.listener = listener
+        self.midi_out = midi_out
 
         self._create_widgets()
         self.bind('<<NotebookTabChanged>>', self._on_tab_changed)
     
     def _create_widgets(self):
         self.controls = ControlsFrame(self, self.settings)
-        self.connections = ConnectionsFrame(self, self.settings, self.listener)
+        self.connections = ConnectionsFrame(self, self.settings, self.listener, self.midi_out) # pass listener and midi_out to gui
         
         for frame in [self.controls, self.connections]:
             self.add(frame, text=frame.name)
@@ -81,11 +78,16 @@ class App(tk.Tk):
         self._stop_event = None
         self._stream_future = None
 
+        # Input
         self.listener = WebsocketServiceListener(
             self.settings.sensors,
             on_disconnect=lambda: self.after(0, self._on_listener_disconnect)
         )
         self.data_streamer = DataStreamer(self.listener)
+
+        # Output
+        self.midi_out = MidiOut(self.settings)
+        self.midi_player = MidiPlayer(self.settings, self.midi_out)
 
         self._create_widgets()
         self.tabs.select(0) # Default tab = Controls
@@ -103,7 +105,7 @@ class App(tk.Tk):
         self.header.pack(padx=10, pady=10, fill='x', expand=False)
 
         # Details tabs
-        self.tabs = Tabs(self, self.settings, self.listener)
+        self.tabs = Tabs(self, self.settings, self.listener, self.midi_out) # pass listener and midi_out to gui
         self.tabs.pack(pady=10, fill='both', expand=True)
 
     def _on_listener_disconnect(self):
@@ -162,11 +164,12 @@ class App(tk.Tk):
             # Successfully connected — start streaming
             self._stop_event = asyncio.Event()
             coro = self.data_streamer.stream(
-                self._threadsafe_callback(Player.play), # callback function to play midi from data
+                self._threadsafe_callback(self.midi_player.play), # callback function to play midi from data
                 self.sample_rate.get(),
                 stop_event=self._stop_event
             )
             self._stream_future = asyncio.run_coroutine_threadsafe(coro, self._run_loop)
+
         elif time.time() - start_time > timeout:
             # Timed out — safely revert button/state
             self.running_status.set(False)

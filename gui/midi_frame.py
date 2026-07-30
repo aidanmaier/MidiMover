@@ -1,29 +1,33 @@
 import mido as md # type supressions needed for Backend methods
+from output import MidiOut
 from gui.config_frame import ConfigFrame
 
 # Callable functions
 def get_ports(self) -> list:
-    """ Returns a list of available MIDI ouput ports. """
-    available_outports = md.get_output_names() # type: ignore
-    return available_outports
+    """Returns a list of available MIDI ouput ports."""
+    return md.get_output_names() # type: ignore
 
 def connect_port(self) -> object:
-    """ Opens connection with selected MIDI output port. """
-    port_name = self.connected_device_name
-    connected_outport = md.open_output(port_name) # type: ignore
-    print('MIDI connected:', connected_outport, '\n') # DEBUG
-    return connected_outport
+    """Opens connection with selected MIDI output port."""
+    port_name: str = self.connected_device_name
+    midi_out: MidiOut = self.midi_out
+    midi_out.open_outport(port_name)
+
+    print('MIDI connected:', midi_out._outport, '\n') # DEBUG
+    return midi_out
 
 def disconnect_port(self) -> None:
-    """ Resets then closes active MIDI output port. """
-    connected_outport = self.connected_device
-    print('MIDI disconnected:', connected_outport, '\n') # DEBUG
-    connected_outport.reset() # type: ignore # all notes off and reset all controllers
-    connected_outport.close() # type: ignore
+    """Resets active MIDI notes/controllers and closes the MidiOut instance."""
+    midi_out: MidiOut = self.connected_device
+    if midi_out and hasattr(midi_out, '_outport'):
+        print('MIDI disconnected:', midi_out._outport, '\n') # DEBUG
+        # Clean up active notes/controllers on underlying mido port before closing
+        midi_out._outport.reset() # type: ignore
+        midi_out.close_outport()
 
 class MidiFrame(ConfigFrame):
-    """ GUI frame for configuring MIDI connections. """
-    def __init__(self, container, settings):
+    """GUI frame for configuring MIDI connections."""
+    def __init__(self, container, settings, midi_out: MidiOut):
         super().__init__(
             container, 
             'Midi Settings', 
@@ -39,3 +43,5 @@ class MidiFrame(ConfigFrame):
             settings.output_connection_status,
             disconnected_label=settings.output_disconnected_label
         )
+
+        self.midi_out = midi_out

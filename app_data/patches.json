@@ -35,31 +35,66 @@
                 }
             }
         },
-        "Test Patch" : {
-            "description": "A test patch lorem ipsum lorem ipsum lorem ipsum lorem ipsum.",
+        "Sound Bow" : {
+            "description": "Bowed instrument metaphor",
             "parameters" : {
                 "0" : {
                     "input" : "Speed",
-                    "input_range" : [23, 86],
+                    "input_range" : [0.0, 15.0],
                     "output" : "Volume",
-                    "output_range" : [12, 90]
+                    "output_range" : [0, 100]
                 },
                 "1" : {
                     "input" : "Pitch",
-                    "input_range" : [1, 10],
-                    "output" : "Cutoff",
-                    "output_range" : [67, 87]
+                    "input_range" : [-0.5, 0.5],
+                    "output" : "Filt Cut",
+                    "output_range" : [0, 100]
                 },
                 "2" : {
-                    "input" : "Yaw",
-                    "input_range" : [0, 100],
-                    "output" : "Note",
+                    "input" : null,
+                    "input_range" : [-0.5, 0.5],
+                    "output" : null,
                     "output_range" : [0, 100]
                 },
                 "3" : {
-                    "input" : "Roll",
+                    "input" : null,
                     "input_range" : [0, 100],
-                    "output" : "Res",
+                    "output" : null,
+                    "output_range" : [0, 100]
+                },
+                "4" : {
+                    "input" : null,
+                    "input_range" : [0, 100],
+                    "output" : null,
+                    "output_range" : [0, 100]
+                }
+            }
+        },
+        "Annoying Bee" : {
+            "description": "Bowed instrument metaphor",
+            "parameters" : {
+                "0" : {
+                    "input" : "Yaw",
+                    "input_range" : [-1.0, 1.0],
+                    "output" : "Bend",
+                    "output_range" : [0, 100]
+                },
+                "1" : {
+                    "input" : null,
+                    "input_range" : [-0.5, 0.5],
+                    "output" : null,
+                    "output_range" : [0, 100]
+                },
+                "2" : {
+                    "input" : null,
+                    "input_range" : [-0.5, 0.5],
+                    "output" : null,
+                    "output_range" : [0, 100]
+                },
+                "3" : {
+                    "input" : null,
+                    "input_range" : [0, 100],
+                    "output" : null,
                     "output_range" : [0, 100]
                 },
                 "4" : {

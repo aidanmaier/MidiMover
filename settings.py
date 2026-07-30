@@ -58,8 +58,8 @@ class Settings:
         p = self.saved_patches_data
 
         # Immutable app settings
-        self.input_parameter_types = ['Speed', 'Pitch', 'Yaw', 'Roll', 'Width', 'Height', 'Depth']
-        self.output_parameter_types = ['Note', 'Volume', 'Res', 'Cutoff']
+        self.input_parameter_types = ['Speed', 'Pitch', 'Yaw', 'Roll'] # plus 'Width', 'Height', 'Depth'
+        self.output_parameter_types = ['Note', 'Bend', 'Volume', 'Filt Res', 'Filt Cut']
 
         self.ws_address: str = FACTORY_SETTINGS['ws_address']
         self.sensors: list[str] = FACTORY_SETTINGS['sensors']

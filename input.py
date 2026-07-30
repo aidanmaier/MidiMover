@@ -172,7 +172,6 @@ class WebsocketServiceListener(ServiceListener):
                     'port': info.port,
                 }
 
-
 class DataStreamer():
     """Streams data from WebSocketServiceListener."""
     def __init__(self, listener: WebsocketServiceListener) -> None:
