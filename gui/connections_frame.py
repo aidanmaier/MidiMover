@@ -11,7 +11,9 @@ class ConnectionsFrame(ttk.Frame):
 
         # Pointers to global settings
         self.settings = settings
-        self.running_status = self.settings.running_status
+        self.running_status: tk.BooleanVar = self.settings.running_status
+        self.selected_input: tk.StringVar = self.settings.selected_input
+        self.selected_output: tk.StringVar = self.settings.selected_output
 
         # Local constants
         self.name = 'Connections'
@@ -28,14 +30,18 @@ class ConnectionsFrame(ttk.Frame):
         self.running_status.trace_add('write', self._update_connections_settings_state)
         self._update_connections_settings_state()
 
+        # Handle changes in selected IO devices
+        self.device_frame.selected_device_name.trace_add('write', self._set_selected_input)
+        self.midi_frame.selected_device_name.trace_add('write', self._set_selected_output)
+
     def _create_widgets(self):
         # Device connections
         self.device_frame = DeviceFrame(self, self.settings, self.listener) # pass listener to gui
-        self.device_frame.grid(column=0, row=0, padx=10, pady=10)
+        self.device_frame.grid(column=0, row=0, sticky='ew', padx=10, pady=10)
 
         # Midi connections
         self.midi_frame = MidiFrame(self, self.settings, self.midi_out) # pass midi_out to gui
-        self.midi_frame.grid(column=1, row=0, padx=(0, 20), pady=10)
+        self.midi_frame.grid(column=1, row=0, sticky='ew', padx=(0, 20), pady=10)
 
         self.refresh_button = ttk.Button(self, text='Refresh Lists', command=self._refresh_lists)
         self.refresh_button.grid(column=1, row=2, sticky='e', padx=(10, 20))
@@ -44,7 +50,7 @@ class ConnectionsFrame(ttk.Frame):
         self.seperator_lower = ttk.Separator(self, orient=tk.HORIZONTAL)
         self.seperator_lower.grid(column=0, row=3, columnspan=2, sticky='ew', padx=20, pady=(15, 5))
 
-        # Connection settings
+        # Connection settings TODO
         self.connection_settings_frame = ttk.Frame(self)
         self.connection_settings_frame.grid(column=0, row=3, columnspan=2, padx=(10, 20), pady=10)
 
@@ -67,6 +73,16 @@ class ConnectionsFrame(ttk.Frame):
         else:
             self.refresh_button.config(state='normal')
             # self.reset_button.config(state='normal')
+    
+    def _set_selected_input(self, *args) -> None:
+        """Passes the input menu selection to global settings."""
+        new_selected_device = self.device_frame.selected_device_name.get()
+        self.selected_input.set(new_selected_device)
+
+    def _set_selected_output(self, *args) -> None:
+        """Passes the output menu selection to global settings."""
+        new_selected_outport = self.midi_frame.selected_device_name.get()
+        self.selected_output.set(new_selected_outport)
     
     def _refresh_lists(self):
         """Refreshes input and output devices lists."""

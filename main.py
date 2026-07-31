@@ -1,85 +1,41 @@
 import asyncio
 import threading
 import time
+import mido
+import sys
 import tkinter as tk
 from tkinter import ttk
 from pathlib import Path
 
 from settings import Settings
+from gui.tabs_frame import Tabs
 from gui.header_frame import Header
-from gui.controls_frame import ControlsFrame
-from gui.connections_frame import ConnectionsFrame
 from input import WebsocketServiceListener, DataStreamer
 from output import MidiOut, MidiPlayer
 
-# RETAIN BLOCK IN CASE CRASHES RETURN
-# import mido
-# import sys
-# # Configure Mido back-end to avoid python-rtmidi PyEval_RestoreThread GIL assertion failure in macOS
-# def configure_mido_backend():
-#     if sys.platform == "darwin":  # macOS
-#         try:
-#             # no C-extension GIL crash during background polling in pygame 
-#             mido.set_backend('mido.backends.pygame')
-#             print("mido: Configured 'pygame' backend for macOS.")
-#         except Exception as e:
-#             print(f"mido: Failed to load pygame backend ({e}). Falling back to default.")
-#     else:  # Windows / Linux
-#         # rtmidi crash only present in macOS
-#         try:
-#             mido.set_backend('mido.backends.rtmidi')
-#             print("mido: Configured 'rtmidi' backend.")
-#         except Exception as e:
-#             print(f"mido: Falling back to default backend ({e}).")
-# configure_mido_backend()
+# Configure Mido back-end to avoid python-rtmidi PyEval_RestoreThread GIL assertion failure in macOS
+def configure_mido_backend():
+    if sys.platform == "darwin":  # macOS
+        try:
+            # no C-extension GIL crash during background polling in pygame 
+            mido.set_backend('mido.backends.pygame')
+            print("mido: Configured 'pygame' backend for macOS.")
+        except Exception as e:
+            print(f"mido: Failed to load pygame backend ({e}). Falling back to default.")
+    else:  # Windows / Linux
+        # rtmidi crash only present in macOS
+        try:
+            mido.set_backend('mido.backends.rtmidi')
+            print("mido: Configured 'rtmidi' backend.")
+        except Exception as e:
+            print(f"mido: Falling back to default backend ({e}).")
+configure_mido_backend()
 
 # Filepaths
 BASE_DIR = Path(__file__).resolve().parent
 DATA_FOLDER = BASE_DIR / "app_data"
 SETTINGS_FILEPATH = DATA_FOLDER / "settings.json"
 PATCHES_FILEPATH = DATA_FOLDER / "patches.json"
-
-class Tabs(ttk.Frame):
-    """ Container for Controls and Connections GUI frames. """
-
-    def __init__(self, container, settings, listener: WebsocketServiceListener, midi_out: MidiOut):
-        super().__init__(container)
-        self.settings = settings
-        self.listener = listener
-        self.midi_out = midi_out
-
-        # Active frame state
-        self.active_frame = None
-
-        self._create_widgets()
-    
-    def _create_widgets(self):
-        self.controls = ControlsFrame(self, self.settings)
-        self.connections = ConnectionsFrame(self, self.settings, self.listener, self.midi_out) # pass listener and midi_out to gui
-
-    def show_frame(self, target_frame: ttk.Frame):
-        """Shows the target frame and hides the active frame, or hides all frames."""
-        # Hide all frames if click of the active frame
-        if self.active_frame == target_frame:
-            self.hide_all_frames()
-            return False
-
-        # Else, hide active frame
-        if self.active_frame:
-            self.active_frame.pack_forget()
-
-        # Show target frame
-        target_frame.pack(fill='both', expand=True)
-        self.active_frame = target_frame
-        target_frame.update_idletasks()
-        return True
-
-    def hide_all_frames(self):
-        """Hides both frames."""
-        if self.active_frame:
-            self.active_frame.pack_forget()
-            self.active_frame= None
-
 
 class App(tk.Tk):
     def __init__(self):
@@ -94,7 +50,7 @@ class App(tk.Tk):
         self.sample_rate: tk.IntVar = self.settings.sample_rate
 
         # Configure root window
-        self.title('MidiMotion')
+        self.title('MidiMover')
 
         # Center window
         screen_width = self.winfo_screenwidth()
@@ -152,26 +108,26 @@ class App(tk.Tk):
         self.tabs.pack(padx=10, pady=10, fill='both', expand=True)
 
     def _configure_styles(self):
-        # Active state for tabs toggle button
+        # Active state for button
         self.style.configure(
-            'ActiveTab.TButton',
+            'Active.TButton',
             background='#0078d7',
             foreground='white'
         )
         # Keep text legible when clicked
         self.style.map(
-            'ActiveTab.TButton',
+            'Active.TButton',
             background=[('pressed', '#005a9e'), ('active', '#0078d7')],
             foreground=[('pressed', 'white'), ('active', 'white')]
         )
 
         # Default style for inactive button
         self.style.configure(
-            'DefaultTab.TButton',
+            'Default.TButton',
             foreground='black'  # Ensure default text color is explicitly visible
         )
         self.style.map(
-            'DefaultTab.TButton',
+            'Default.TButton',
             foreground=[('pressed', 'black'), ('active', 'black')]
         )
 
@@ -198,7 +154,7 @@ class App(tk.Tk):
 
             # Reset GUI
             self.tabs.connections.device_frame._on_unexpected_disconnect()
-            self.header.start_button.config(state='disable', text='START')
+            self.header.start_button.config(state='disable', text='PLAY', style='Default.TButton')
 
     def _on_close(self):
         """ Cleanup handler before window closes. """

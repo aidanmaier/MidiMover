@@ -78,7 +78,8 @@ class Settings:
         self.sample_rate = tk.IntVar(value=self.default_sample_rate)
         self.connection_status = tk.StringVar(value='Unconnected')
         self.running_status = tk.BooleanVar(value=False)
-        self.tabs_visible = tk.BooleanVar(value=True)
+        self.selected_input = tk.StringVar(value='')
+        self.selected_output = tk.StringVar(value='')
 
         self.input_connection = tk.StringVar(value='')
         self.input_connection_name = tk.StringVar(value=self.input_disconnected_label)
@@ -91,6 +92,11 @@ class Settings:
         self.loaded_patch_name = tk.StringVar(value='')
         self.loaded_patch_description = tk.StringVar(value='')
         self.loaded_patch_parameters_data = {}
+
+        # Write default changes to settings.json
+        self.default_device.trace_add('write', self._write_default_device)
+        self.default_outport.trace_add('write', self._write_default_outport)
+        self.default_patch.trace_add('write', self._write_default_patch)
 
     def _save_settings(self, data: dict) -> None:
         """Writes settings to disk and saved_settings variable."""
@@ -148,8 +154,24 @@ class Settings:
             with open(self.patches_filepath, 'r') as INFILE:
                 return json.load(INFILE)
 
-    def _save_patch(self) -> None:
-        pass
+    def _write_default_device(self, *args):
+        """Writes new default device to settings.json."""
+        self.saved_settings["default_device"] = self.default_device.get()
+        self._save_settings(self.saved_settings)
+
+    def _write_default_outport(self, *args):
+        """Writes new default ouport to settings.json."""
+        self.saved_settings["default_outport"] = self.default_outport.get()
+        self._save_settings(self.saved_settings)
+
+    def _write_default_patch(self, *args):
+        """Writes new default patch to settings.json."""
+        self.saved_settings["default_patch"] = self.default_patch.get()
+        self._save_settings(self.saved_settings)
 
     def _factory_patches_reset(self) -> None:
         pass
+
+
+
+

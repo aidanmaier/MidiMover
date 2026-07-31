@@ -45,7 +45,7 @@ class ConfigFrame(ttk.Frame):
 
         # Local variables
         self.available_devices = []
-        self.selected_device_name = None
+        self.selected_device_name = tk.StringVar(value='')
         self.connection_state = False # connection state flag
         self.connected_device = None
         self.connected_device_name = None
@@ -64,26 +64,20 @@ class ConfigFrame(ttk.Frame):
         self.running_status.trace_add('write', self._on_running_status_change)
 
     def _create_widgets(self):
-        # Available MIDI devices list
+        # Available devices list
         self.devices_label = ttk.Label(self, text=f'{self.connection_type} {self.device_type}s:')
         self.devices_label.grid(column=0, row=0, **self.options)
 
-        # Set default button
-        # self.connection_buttons_frame = ttk.Frame(self)
-        # self.connection_buttons_frame.grid(column=1, row=0, sticky='e', padx=0, pady=0)
-        # self.connect_button = ttk.Button(self.connection_buttons_frame, text='Connect', state='disabled', command=self._connect_device)
-        # self.connect_button.grid(column=0, row=0, **self.options)
-        self.set_default_button = ttk.Button(self, text=f'Set Default {self.device_type}', state='disabled', command=self._on_set_default)
+        # Set default device button
+        self.set_default_button = ttk.Button(self, text=f'Set Default {self.device_type}', state='normal', command=self._on_set_default)
         self.set_default_button.grid(column=1, row=0, sticky='e', padx=0, pady=5)
 
         # Devices list
         self.devices_list = ttk.Treeview(self, columns=('device','status', 'default'), show='headings', height=6, selectmode='browse')
-        self.devices_list.heading('device', text=f'{self.device_type} Name')
-        self.devices_list.column('device', width=160, anchor='w')
-        self.devices_list.heading('status', text='Connection')
-        self.devices_list.column('status', width=50, anchor='w')
-        self.devices_list.heading('default', text=f'Default')
-        self.devices_list.column('default', width=30, anchor='w')
+        self.devices_list.heading('device', text=f'{self.device_type} Name', anchor='w')
+        self.devices_list.column('device', anchor='w')
+        self.devices_list.heading('status', text='Connection', anchor='w')
+        self.devices_list.column('status', anchor='w')
         self.devices_list.grid(column=0, row=2, columnspan=2, padx=(10, 0), pady=0, sticky='nsew')
         self.devices_list.bind('<<TreeviewSelect>>', self._on_device_select)
 
@@ -96,12 +90,6 @@ class ConfigFrame(ttk.Frame):
         self.devices_list.tag_configure('unconnected', foreground='blue')
         self.devices_list.tag_configure('connected', foreground='green')
         self.devices_list.tag_configure('unavailable', foreground='red')
-
-        # Set Default button logic
-        if self.selected_device_name and self.selected_device_name != self.default_device:
-            self.set_default_button.config(state='normal')
-        else:
-            self.set_default_button.config(state='disabled')
 
     def _set_status(self, state: bool):
         """Sets connection status label and button states."""
@@ -118,26 +106,36 @@ class ConfigFrame(ttk.Frame):
         """Captures selected item name."""
         selected_items = self.devices_list.selection()
         if not selected_items:
-            self.selected_device_name = None
+            self.selected_device_name.set('')
             return
 
-        selected_item = selected_items[0] # full device name (iid)
-        tags = self.devices_list.item(selected_item, 'tags')
+        # Full device name (iid)
+        selected_item = selected_items[0] 
+
+        # Disable Set Default button if no devices or default already selected
+        if selected_item and selected_item != self.default_device:
+            self.set_default_button.config(state='normal')
+        else:
+            self.set_default_button.config(state='disabled')
+
         # Make unavailable items non-selectable
+        tags = self.devices_list.item(selected_item, 'tags')
         if 'unavailable' in tags:
             self.devices_list.selection_remove(selected_item)
-            self.selected_device_name = None
+            self.selected_device_name.set('')
             return
 
-        self.selected_device_name = selected_item
+        self.selected_device_name.set(selected_item)
 
 
     def _on_set_default(self):
         """Makes the selected MIDI output device the new default device."""
-        if not self.selected_device_name:
+        selected_item = self.selected_device_name.get()
+
+        if not selected_item:
             return
-        self.default_device = self.selected_device_name # update local setting
-        self.default_device_var.set(self.selected_device_name) # update global setting
+        self.default_device = selected_item # update local setting
+        self.default_device_var.set(selected_item) # update global setting
         self._refresh_devices_list()
 
     def _on_running_status_change(self, *args):
@@ -149,18 +147,19 @@ class ConfigFrame(ttk.Frame):
 
     def _connect_device(self):
         """Opens connection with selected device."""
+        selected_device_name = self.selected_device_name.get()
 
         # Check if already connected
         if self.connection_status_var.get():
             return
 
         # Connect to selected device
-        self.connected_device_name = self.selected_device_name
+        self.connected_device_name = selected_device_name
         self.connected_device = self.connect_device(self) # call connect function
 
         self._set_status(True) # update local setting
-        self.connection_var.set(str(self.selected_device_name)) # update global settings
-        self.connection_name_var.set(str(self.selected_device_name).removesuffix('.' + self.settings.ws_address))
+        self.connection_var.set(selected_device_name) # update global settings
+        self.connection_name_var.set(str(selected_device_name).removesuffix('.' + self.settings.ws_address))
         self.connection_status_var.set(True)
         self._refresh_devices_list()
 
@@ -189,12 +188,13 @@ class ConfigFrame(ttk.Frame):
     def _focus_list(self):
             """Focuses selection on the connected or default item if present."""
             focus_item = None
+            selected_device = self.selected_device_name.get()
 
             # List focus priority: connected -> selected -> default
             if self.connection_state:
                 focus_name = self.connected_device_name
-            elif self.selected_device_name:
-                focus_name = self.selected_device_name
+            elif selected_device:
+                focus_name = selected_device
             elif self.default_device:
                 focus_name = self.default_device
             else:
@@ -225,7 +225,7 @@ class ConfigFrame(ttk.Frame):
                 self.devices_list.selection_set(focus_item)
                 self.devices_list.focus(focus_item)
                 self.devices_list.see(focus_item)
-                self.selected_device_name = focus_name
+                self.selected_device_name.set(str(focus_name))
                 
 
     def _refresh_devices_list(self):
@@ -251,22 +251,26 @@ class ConfigFrame(ttk.Frame):
         # Add available devices to list with default connection status
         # Strip '._websocket._tcp.local.' suffix from name for display
         for connection in self.available_devices:
-            default_status = ''
-            if connection == self.default_device:
-                default_status = 'Default'
+
+            # Tag default connection
+            if connection == self.default_device_var.get():
+                connection_name = connection.removesuffix('._websocket._tcp.local.') + ' (default)'  
+            else:
+                connection_name = connection.removesuffix('._websocket._tcp.local.')
+                
             if connection == self.connected_device_name:
                 self.devices_list.insert(
                     '', 
                     tk.END, 
                     iid=connection,
-                    values=(connection.removesuffix('._websocket._tcp.local.'), 'Connected', default_status), 
+                    values=(connection_name, 'Connected'), 
                     tags=('connected',))
             else:
                 self.devices_list.insert(
                     '', 
                     tk.END, 
                     iid=connection,
-                    values=(connection.removesuffix('._websocket._tcp.local.'), 'Available', default_status), 
+                    values=(connection_name, 'Available'), 
                     tags=('unconnected',))
 
         # If default device unavailable, flag in list
@@ -275,7 +279,7 @@ class ConfigFrame(ttk.Frame):
                 '', 
                 tk.END, 
                 iid=self.default_device,
-                values=(self.default_device.removesuffix('._websocket._tcp.local.'), 'Unavailable', 'Default'), 
+                values=(self.default_device.removesuffix('._websocket._tcp.local.') + ' (default)', 'Unavailable'), 
                 tags=('unavailable',))
 
         # Focus on connected or default item

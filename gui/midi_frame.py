@@ -20,6 +20,11 @@ def get_ports(self) -> list:
             print(f"Error scanning MIDI ports via Pygame: {e}")
             return []
 
+# def get_ports(self) -> list:
+#     """Returns a list of available MIDI ouput ports."""
+#     with MIDI_LOCK:
+#         return md.get_output_names() # type: ignore
+
 def connect_port(self) -> object:
     """Opens connection with selected MIDI output port."""
     port_name: str = self.connected_device_name

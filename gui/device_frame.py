@@ -12,7 +12,7 @@ def get_devices(self) -> list[str]:
 
 def connect_device(self) -> object:
         """Connects to the selected websocket device on a background thread."""
-        device = self.selected_device_name
+        device = self.selected_device_name.get()
         connected_device = self.listener.discovered_services.get(device)
         self.connected_device_name = device
 

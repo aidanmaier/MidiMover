@@ -1,5 +1,4 @@
 import tkinter as tk
-from tkinter import ttk
 
 class RangeSlider(tk.Canvas):
     """A two-handle range slider built on Canvas."""

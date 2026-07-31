@@ -18,15 +18,17 @@ class Header(ttk.Frame):
         self.loaded_patch_description: tk.StringVar = self.settings.loaded_patch_description
         self.loaded_patch_parameters_data: dict = self.settings.loaded_patch_parameters_data
         self.running_status: tk.BooleanVar = self.settings.running_status
+        self.selected_input: tk.StringVar = self.settings.selected_input
+        self.selected_output: tk.StringVar = self.settings.selected_output
 
         self.input_settings = {
-             'connection_name': self.settings.input_connection_name,
+             'connection_name': self.selected_input,
              'connection_status': self.settings.input_connection_status,
              'disconnected_label': self.settings.input_disconnected_label,
         }
 
         self.output_settings = {
-             'connection_name': self.settings.output_connection_name,
+             'connection_name': self.selected_output,
              'connection_status': self.settings.output_connection_status,
              'disconnected_label': self.settings.output_disconnected_label             
         }
@@ -48,6 +50,10 @@ class Header(ttk.Frame):
             self.rowconfigure(i, weight=1)
 
         self._create_widgets()
+        if self.ready_state.get() == 'Ready':
+            self.start_button.focus()
+        else:
+            self.connections_button.focus()
 
         # Auto-load default patch if any, otherwise load new patch
         self._initiate_menu()
@@ -74,6 +80,16 @@ class Header(ttk.Frame):
         self.patch_var.trace_add('write', self._load_selected_patch)
         self._load_selected_patch()
 
+        # Keep input status colors and text in sync
+        self._create_status_tracer(self.input_settings['connection_name'], self.input_status_label, **self.input_settings)
+        self._create_status_tracer(self.input_settings['connection_status'], self.input_status_label, **self.input_settings)
+        self._update_status(self.input_status_label, **self.input_settings)
+
+        # Keep output status colors and text in sync
+        self._create_status_tracer(self.output_settings['connection_name'], self.output_status_label, **self.output_settings)
+        self._create_status_tracer(self.output_settings['connection_status'], self.output_status_label, **self.output_settings)
+        self._update_status(self.output_status_label, **self.output_settings)
+
 
     def _create_widgets(self):
         # Start/Stop button, status icon and label
@@ -95,7 +111,7 @@ class Header(ttk.Frame):
         self.input_frame.grid(column=1, row=0, columnspan=2, sticky='w', padx=0)
         self.input_label = ttk.Label(self.input_frame, text='Input Device:')
         self.input_label.grid(column=0, row=0, sticky='w', padx=5, pady=(10, 5))
-        self.input_status_label = ttk.Label(self.input_frame, textvariable=self.settings.input_connection_name)
+        self.input_status_label = ttk.Label(self.input_frame, width=15)
         self.input_status_label.grid(column=1, row=0, sticky='w', padx=0, pady=(10, 5))
 
         # Output information
@@ -103,7 +119,7 @@ class Header(ttk.Frame):
         self.output_frame.grid(column=3, row=0, columnspan=2, sticky='w', padx=5)
         self.output_label = ttk.Label(self.output_frame, text='MIDI Port:')
         self.output_label.grid(column=0, row=0, sticky='w', padx=5, pady=(10, 5))
-        self.output_status_label = ttk.Label(self.output_frame, textvariable=self.settings.output_connection_name)
+        self.output_status_label = ttk.Label(self.output_frame, width=15)
         self.output_status_label.grid(column=1, row=0, sticky='w', padx=0, pady=(10, 5))
 
         # Connections button
@@ -111,7 +127,7 @@ class Header(ttk.Frame):
             self, 
             text='Connections', 
             width=9, 
-            style='DefaultTab.TButton',
+            style='Default.TButton',
             command=self._on_connections_button
             )
         self.connections_button.grid(column=5, row=0, sticky='e', padx=10, pady=(10, 10))
@@ -138,7 +154,7 @@ class Header(ttk.Frame):
             self, 
             text='Controls', 
             width=9, 
-            style='DefaultTab.TButton',
+            style='Default.TButton',
             command=self._on_controls_button
             )
         self.controls_button.grid(column=5, row=2, sticky='e', padx=10, pady=(10, 10))
@@ -150,16 +166,26 @@ class Header(ttk.Frame):
                 lambda *args: self._update_status(status_label=label, **global_settings)
             )
          
-    def _update_status(self, status_label: ttk.Label, connection_name: tk.StringVar, connection_status: tk.BooleanVar, disconnected_label: str) -> None:
+    def _update_status(
+            self, 
+            status_label: ttk.Label, 
+            connection_name: tk.StringVar, 
+            connection_status: tk.BooleanVar, 
+            disconnected_label: str
+        ) -> None:
         """Updates connection status label with correct color."""
-        name = connection_name.get()
-        if name == disconnected_label: # no default or connected device available
+        name = connection_name.get().removesuffix('._websocket._tcp.local.')
+
+        if not name or name == disconnected_label: # no default or connected device available
+            display_text = disconnected_label
             color = 'red'
         elif connection_status.get(): # device connected
+            display_text = name
             color = 'green'
         else:
             color = 'blue' # default device available but unconnected
-        status_label.config(foreground=color, text=name)
+            display_text = name
+        status_label.config(foreground=color, text=display_text)
 
     def _update_start_button_state(self, *args):
         """ Enables start button only if both inputs connected or have available defaults """
@@ -230,15 +256,15 @@ class Header(ttk.Frame):
     def _update_tabs_buttons(self, active_tab: str | None):
         """Highlights the button of the active tab and hides the other."""
         if active_tab == 'connections':
-            self.connections_button.config(style='ActiveTab.TButton')
-            self.controls_button.config(style='DefaultTab.TButton')
+            self.connections_button.config(style='Active.TButton')
+            self.controls_button.config(style='Default.TButton')
         elif active_tab == 'controls':
-            self.controls_button.config(style='ActiveTab.TButton')
-            self.connections_button.config(style='DefaultTab.TButton')
+            self.controls_button.config(style='Active.TButton')
+            self.connections_button.config(style='Default.TButton')
         else:
             # Both closed
-            self.connections_button.config(style='DefaultTab.TButton')
-            self.controls_button.config(style='DefaultTab.TButton')
+            self.connections_button.config(style='Default.TButton')
+            self.controls_button.config(style='Default.TButton')
 
     def _initiate_menu(self):
         """Set initial menu selection to the default patch if any."""
@@ -252,10 +278,10 @@ class Header(ttk.Frame):
         running = self.settings.running_status.get()
         if not running:
             self.settings.running_status.set(True)
-            self.start_button.config(text='STOP')
+            self.start_button.config(text='STOP', style='Active.TButton')
         else:
             self.settings.running_status.set(False)
-            self.start_button.config(text='PLAY')
+            self.start_button.config(text='PLAY', style='Default.TButton')
 
     def _on_connections_button(self):
         """Toggles visibility of connections frame."""
