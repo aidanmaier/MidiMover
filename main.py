@@ -4,6 +4,7 @@ import time
 import tkinter as tk
 from tkinter import ttk
 from pathlib import Path
+
 from settings import Settings
 from gui.header_frame import Header
 from gui.controls_frame import ControlsFrame
@@ -11,14 +12,35 @@ from gui.connections_frame import ConnectionsFrame
 from input import WebsocketServiceListener, DataStreamer
 from output import MidiOut, MidiPlayer
 
+# RETAIN BLOCK IN CASE CRASHES RETURN
+# import mido
+# import sys
+# # Configure Mido back-end to avoid python-rtmidi PyEval_RestoreThread GIL assertion failure in macOS
+# def configure_mido_backend():
+#     if sys.platform == "darwin":  # macOS
+#         try:
+#             # no C-extension GIL crash during background polling in pygame 
+#             mido.set_backend('mido.backends.pygame')
+#             print("mido: Configured 'pygame' backend for macOS.")
+#         except Exception as e:
+#             print(f"mido: Failed to load pygame backend ({e}). Falling back to default.")
+#     else:  # Windows / Linux
+#         # rtmidi crash only present in macOS
+#         try:
+#             mido.set_backend('mido.backends.rtmidi')
+#             print("mido: Configured 'rtmidi' backend.")
+#         except Exception as e:
+#             print(f"mido: Falling back to default backend ({e}).")
+# configure_mido_backend()
+
 # Filepaths
 BASE_DIR = Path(__file__).resolve().parent
 DATA_FOLDER = BASE_DIR / "app_data"
 SETTINGS_FILEPATH = DATA_FOLDER / "settings.json"
 PATCHES_FILEPATH = DATA_FOLDER / "patches.json"
 
-class Tabs(ttk.Notebook):
-    """ Tabbed container for GUI frames. """
+class Tabs(ttk.Frame):
+    """ Container for Controls and Connections GUI frames. """
 
     def __init__(self, container, settings, listener: WebsocketServiceListener, midi_out: MidiOut):
         super().__init__(container)
@@ -26,22 +48,38 @@ class Tabs(ttk.Notebook):
         self.listener = listener
         self.midi_out = midi_out
 
+        # Active frame state
+        self.active_frame = None
+
         self._create_widgets()
-        self.bind('<<NotebookTabChanged>>', self._on_tab_changed)
     
     def _create_widgets(self):
         self.controls = ControlsFrame(self, self.settings)
         self.connections = ConnectionsFrame(self, self.settings, self.listener, self.midi_out) # pass listener and midi_out to gui
-        
-        for frame in [self.controls, self.connections]:
-            self.add(frame, text=frame.name)
-    
-    def _on_tab_changed(self, event):
-        """ Force update of new tab for instant rendering. """
-        selected_tab = self.select()
-        if selected_tab:
-            tab = self.nametowidget(selected_tab)
-            tab.update_idletasks()
+
+    def show_frame(self, target_frame: ttk.Frame):
+        """Shows the target frame and hides the active frame, or hides all frames."""
+        # Hide all frames if click of the active frame
+        if self.active_frame == target_frame:
+            self.hide_all_frames()
+            return False
+
+        # Else, hide active frame
+        if self.active_frame:
+            self.active_frame.pack_forget()
+
+        # Show target frame
+        target_frame.pack(fill='both', expand=True)
+        self.active_frame = target_frame
+        target_frame.update_idletasks()
+        return True
+
+    def hide_all_frames(self):
+        """Hides both frames."""
+        if self.active_frame:
+            self.active_frame.pack_forget()
+            self.active_frame= None
+
 
 class App(tk.Tk):
     def __init__(self):
@@ -50,7 +88,7 @@ class App(tk.Tk):
 
         #Pointers to global settings
         self.settings = Settings(SETTINGS_FILEPATH, PATCHES_FILEPATH)
-        self.tabs_visible: tk.BooleanVar = self.settings.tabs_visible
+        # self.tabs_visible: tk.BooleanVar = self.settings.tabs_visible TODO: remove
         self.running_status: tk.BooleanVar = self.settings.running_status
         self.sensors: list[str] = self.settings.sensors
         self.sample_rate: tk.IntVar = self.settings.sample_rate
@@ -61,15 +99,21 @@ class App(tk.Tk):
         # Center window
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
-        window_width = 600
-        window_height = 620
-        offset_x = (screen_width - window_width) // 2 # distance to screen center - distance to window center
-        offset_y = (screen_height - window_height) // 2         
+        self.window_width = 760
+        self.window_min_height = 120 # height when config tabs closed
+        self.window_max_height = 620 #height when config tabs open
+        offset_x = (screen_width - self.window_width) // 2 # distance to screen center - distance to window center
+        offset_y = (screen_height - self.window_max_height) // 2         
 
         # Window size
-        self.geometry(f'{window_width}x{window_height}+{offset_x}+{offset_y}')
+        self.geometry(f'{self.window_width}x{self.window_min_height}+{offset_x}+{offset_y}')
         self.resizable(False, False)
         self.attributes('-topmost', 1) # always on top
+
+        # Configure widget styling
+        self.style = ttk.Style()
+        self.style.theme_use('alt') #('aqua', 'clam', 'alt', 'default', 'classic')
+        self._configure_styles()
 
         # Background thread for async loop, as async not supported by tkinter
         self._run_loop = asyncio.new_event_loop()
@@ -90,23 +134,62 @@ class App(tk.Tk):
         self.midi_player = MidiPlayer(self.settings, self.midi_out)
 
         self._create_widgets()
-        self.tabs.select(0) # Default tab = Controls
         self.protocol('WM_DELETE_WINDOW', self._on_close) # Handle window close
-
-        # Handle toggle button state (in header)
-        self.tabs_visible.trace_add('write', self._on_toggle_button)
 
         # Handle running status
         self.running_status.trace_add('write', self._on_running_status_change)
+
+        # Start the polling loop on the main Tkinter thread
+        self._poll_midi_queue()
     
     def _create_widgets(self):
-        # Quick config
+        # Quick config header
         self.header = Header(self, self.settings)
         self.header.pack(padx=10, pady=10, fill='x', expand=False)
 
-        # Details tabs
+        # Connections and Controls config tabs
         self.tabs = Tabs(self, self.settings, self.listener, self.midi_out) # pass listener and midi_out to gui
-        self.tabs.pack(pady=10, fill='both', expand=True)
+        self.tabs.pack(padx=10, pady=10, fill='both', expand=True)
+
+    def _configure_styles(self):
+        # Active state for tabs toggle button
+        self.style.configure(
+            'ActiveTab.TButton',
+            background='#0078d7',
+            foreground='white'
+        )
+        # Keep text legible when clicked
+        self.style.map(
+            'ActiveTab.TButton',
+            background=[('pressed', '#005a9e'), ('active', '#0078d7')],
+            foreground=[('pressed', 'white'), ('active', 'white')]
+        )
+
+        # Default style for inactive button
+        self.style.configure(
+            'DefaultTab.TButton',
+            foreground='black'  # Ensure default text color is explicitly visible
+        )
+        self.style.map(
+            'DefaultTab.TButton',
+            foreground=[('pressed', 'black'), ('active', 'black')]
+        )
+
+    def _toggle_tabs(self, panel_name:str):
+        """Hides active tab and shows new tab."""
+        if panel_name == 'connections':
+            target_frame = self.tabs.connections
+        else:
+            target_frame = self.tabs.controls
+
+        frame_visible = self.tabs.show_frame(target_frame)
+
+        if frame_visible:
+            self.header._update_tabs_buttons(panel_name)
+            self.geometry(f'{self.window_width}x{self.window_max_height}') # restore
+        else:
+            self.header._update_tabs_buttons(None)
+            self.geometry(f'{self.window_width}x{self.window_min_height}') # minimise
 
     def _on_listener_disconnect(self):
         """Stops the running status if the websocket closes unexpectedly."""
@@ -116,16 +199,6 @@ class App(tk.Tk):
             # Reset GUI
             self.tabs.connections.device_frame._on_unexpected_disconnect()
             self.header.start_button.config(state='disable', text='START')
-
-    def _on_toggle_button(self, *args):
-        """Hides or shows tabs based on toggle state."""
-        expanded = self.tabs_visible.get()
-        if not expanded:
-            self.tabs.pack_forget() # does not detroy object so states are not lost
-            self.geometry('600x120') # collapse window height
-        else:
-            self.tabs.pack(padx=10, pady=(0, 10), fill='both', expand=True)
-            self.geometry('600x620') # restore window height 
 
     def _on_close(self):
         """ Cleanup handler before window closes. """
@@ -154,31 +227,40 @@ class App(tk.Tk):
             if self._stop_event is not None:
                 self._run_loop.call_soon_threadsafe(self._stop_event.set)
 
+    def _poll_midi_queue(self):
+        """ Drain queued MIDI output requests on Tkinter's main thread """
+        if hasattr(self, 'midi_player'):
+            self.midi_player.process_queue()
+        
+        # Schedule next run in ~10ms (100Hz tick rate)
+        self.after(10, self._poll_midi_queue)
+
     def _wait_for_listener_and_start(self, start_time: float, timeout=5.0):
-        """In background thread, wait for listener to connect, then run stream. Timeout after 50s."""
-        # Check if status was canceled while waiting
+        """In background thread, wait for listener to connect, then run stream."""
         if not self.running_status.get():
             return
 
         if self.listener.open:
-            # Successfully connected — start streaming
             self._stop_event = asyncio.Event()
+            
+            # Successfully connected — start streaming
             coro = self.data_streamer.stream(
-                self._threadsafe_callback(self.midi_player.play), # callback function to play midi from data
+                self.midi_player.play, # callback function to play midi from input data
                 self.sample_rate.get(),
                 stop_event=self._stop_event
             )
             self._stream_future = asyncio.run_coroutine_threadsafe(coro, self._run_loop)
 
         elif time.time() - start_time > timeout:
-            # Timed out — safely revert button/state
             self.running_status.set(False)
             print("Timeout Error: Websocket listener failed to open in time.")
         else:
-            # Re-check after 50ms
             self.after(50, lambda: self._wait_for_listener_and_start(start_time, timeout))
 
 
 if __name__ == '__main__':
     app = App()
     app.mainloop()
+
+
+

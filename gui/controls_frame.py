@@ -49,7 +49,7 @@ class ControlsFrame(ttk.Frame):
         # Patch info
         self.patch_name_frame = ttk.Frame(self)
         self.patch_name_frame.grid(column=0, row=0, columnspan=2, **self.options)
-        self.patch_name_label = ttk.Label(self.patch_name_frame, text='Active patch:', width=10)
+        self.patch_name_label = ttk.Label(self.patch_name_frame, text='Instrument:', width=10)
         self.patch_name_label.pack(side='left')
         self.patch_name = ttk.Label(self.patch_name_frame, textvariable=self.loaded_patch_name)
         self.patch_name.pack(side='left')

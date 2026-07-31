@@ -1,6 +1,6 @@
 {
     "patches" : {
-        "< New Patch >" : {
+        "< new instrument >" : {
             "description": "A blank patch.",
             "parameters" : {
                 "0" : {

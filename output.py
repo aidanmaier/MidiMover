@@ -1,5 +1,6 @@
 import mido
 import asyncio
+import queue
 from typing import Any
 from signal_processing import calculate_magnitude, quaternion_to_euler
 from mapping import midi_map, pitchwheel_map
@@ -41,6 +42,20 @@ class MidiOut():
 
     def close_outport(self) -> None:
         self._outport.close()
+
+    def is_open(self) -> bool:
+        """Returns True if outport exists and is open."""
+        return self._outport is not None and not getattr(self._outport, 'closed', True)
+
+    def _safe_send(self, msg: mido.Message) -> None:
+        """Guards against sending to closed ports."""
+        if not self.is_open():
+            return
+
+        try:
+            self._outport.send(msg)  # type: ignore
+        except (ValueError, RuntimeError) as e:
+            print(f"MidiOut Warning: Cannot send message. Port closed or invalid ({e}).")
     
     def note_on(self, pitch: int) -> None:
         """
@@ -48,7 +63,7 @@ class MidiOut():
         Input values: pitch [0..127]
         """
         msg = mido.Message('note_on', channel=self.channel, note=pitch, velocity=64)
-        self._outport.send(msg)
+        self._safe_send(msg)
 
     def note_off(self, pitch: int) -> None:
         """
@@ -56,7 +71,7 @@ class MidiOut():
         Input values: pitch [0..127]
         """
         msg = mido.Message('note_off', channel=self.channel, note=pitch, velocity=0)
-        self._outport.send(msg)
+        self._safe_send(msg)
         
     def pitch_bend(self, mod: int, ) -> None:
         """
@@ -64,7 +79,7 @@ class MidiOut():
         Input values: mod [-8192..8191]
         """
         msg = mido.Message('pitchwheel', channel=self.channel, pitch=mod)
-        self._outport.send(msg)
+        self._safe_send(msg)
 
     async def perc(self, pitch: int, duration: float = 0.1) -> None:
         """
@@ -86,11 +101,10 @@ class MidiOut():
             control [valid controls held in midi.control_codes], 
             value [0..127]
         """
-        outport = self._outport
         channel = self.channel
         control_code = control_codes[control]
         cc = mido.Message('control_change', channel=channel, control=control_code, value=value )
-        outport.send(cc)
+        self._safe_send(cc)
 
 class MidiPlayer:
     def __init__(self, settings, midi_out: MidiOut) -> None:
@@ -99,7 +113,11 @@ class MidiPlayer:
         self.settings = settings
         self.midi_out = midi_out
 
+        # Thread-safe queue for buffering MIDI outputs across threads
+        self.midi_queue = queue.Queue()
+
     def play(self, sample: dict[str, Any]) -> None:
+        """Processes sensor data samples and sends them to the thread-safe queue."""
 
         # Raw input data
         acceleration: list[float] = sample['sensors']['linear_acceleration']
@@ -142,17 +160,35 @@ class MidiPlayer:
                 )
                 mapped_vals[output_name] = output_value
 
-        # Send MIDI data
-        output_params = mapped_vals.keys()
-        if 'Note' in output_params:
-            pass # TODO: implement note control
-        if 'Bend' in output_params:
-            self.midi_out.pitch_bend(mapped_vals['Bend'])
-        if 'Volume' in output_params:
-            self.midi_out.cc('Volume', value=mapped_vals['Volume'])
-        if 'Filt Cut' in output_params:
-            self.midi_out.cc('Filt Cut', value=mapped_vals['Filt Cut'])
-        if 'Filt Res' in output_params:
-            self.midi_out.cc('Filt Res', value=mapped_vals['Filt Res'])
+        # Send mapped values to the thread-safe queue
+        if mapped_vals:
+            self.midi_queue.put(mapped_vals)
 
-        print(mapped_vals) # DEBUG
+    def process_queue(self) -> None:
+        """
+        Flushes queue and sends all queued MIDI messages. 
+        Must be called from the main tkinter thread.
+        """
+        while not self.midi_queue.empty():
+            try:
+                mapped_vals: dict = self.midi_queue.get_nowait()
+                output_params = mapped_vals.keys()
+
+                # Send MIDI data
+                if 'Note' in output_params:
+                    pass # TODO: implement note control
+                if 'Bend' in output_params:
+                    self.midi_out.pitch_bend(mapped_vals['Bend'])
+                if 'Volume' in output_params:
+                    self.midi_out.cc('Volume', value=mapped_vals['Volume'])
+                if 'Filt Cut' in output_params:
+                    self.midi_out.cc('Filt Cut', value=mapped_vals['Filt Cut'])
+                if 'Filt Res' in output_params:
+                    self.midi_out.cc('Filt Res', value=mapped_vals['Filt Res'])
+
+                print(mapped_vals) # DEBUG
+
+            except queue.Empty:
+                break
+
+            

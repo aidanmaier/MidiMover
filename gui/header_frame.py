@@ -2,13 +2,22 @@ import tkinter as tk
 from tkinter import ttk
 
 class Header(ttk.Frame):
-    """Top-level status bar showing connection status."""
+    """Quick config header showing connection status and patch loading."""
 
     def __init__(self, container, settings):
         super().__init__(container)
 
         # Pointers to global settings
         self.settings = settings
+        self.default_patch: tk.StringVar = self.settings.default_patch
+        self.saved_patches_list: list = [
+            f"{patch} (default)" if patch == self.default_patch.get() else patch # tag default patch
+            for patch in self.settings.saved_patches_list
+        ]
+        self.loaded_patch_name: tk.StringVar = self.settings.loaded_patch_name
+        self.loaded_patch_description: tk.StringVar = self.settings.loaded_patch_description
+        self.loaded_patch_parameters_data: dict = self.settings.loaded_patch_parameters_data
+        self.running_status: tk.BooleanVar = self.settings.running_status
 
         self.input_settings = {
              'connection_name': self.settings.input_connection_name,
@@ -22,29 +31,17 @@ class Header(ttk.Frame):
              'disconnected_label': self.settings.output_disconnected_label             
         }
 
-        self.default_patch: tk.StringVar = self.settings.default_patch
-        self.saved_patches_list: list = self.settings.saved_patches_list
-        self.loaded_patch_name: tk.StringVar = self.settings.loaded_patch_name
-        self.loaded_patch_description: tk.StringVar = self.settings.loaded_patch_description
-        self.loaded_patch_parameters_data: dict = self.settings.loaded_patch_parameters_data
-
-        self.tabs_visible: tk.BooleanVar = self.settings.tabs_visible
-
         # Local constants
         self.name = 'Quick Configuration'
         self.options = {'sticky':'w', 'padx':10, 'pady':(10, 5)} # widgit placement options
-        self.new_patch_label = '< New Patch >'
+        self.new_patch_label = '< new instrument >'
 
         # Local variables
         self.ready_state = tk.StringVar(value='Unconnected')
-
-        # TODO: add default patch if unavailables
-
-        self.patch_var = tk.StringVar(value=self.saved_patches_list[0])
+        self.patch_var = tk.StringVar(value=self.saved_patches_list[0]) # patch menu selection
         
         # Configure grid
-        self.columnconfigure(0, weight=2)
-        for i in range(1, 5):
+        for i in range(6):
             self.columnconfigure(i, weight=1)
 
         for i in range(2):
@@ -54,7 +51,7 @@ class Header(ttk.Frame):
 
         # Auto-load default patch if any, otherwise load new patch
         self._initiate_menu()
-        self._on_load_patch_button()
+        # self._on_load_patch_button()
 
         # Keep output status colors in sync with connection state
         self._create_status_tracer(self.input_settings['connection_name'], self.input_status_label, **self.input_settings)
@@ -71,29 +68,32 @@ class Header(ttk.Frame):
         self.settings.running_status.trace_add('write', self._update_start_button_state)
         self._update_start_button_state()
 
-        # Manage patch button states
-        self.patch_var.trace_add('write', self._update_load_patch_button_state)
-        self._update_load_patch_button_state()
+        # Manage patch menu state and patch loading
+        self.running_status.trace_add('write', self._update_patch_menu)
+        self._update_patch_menu()
+        self.patch_var.trace_add('write', self._load_selected_patch)
+        self._load_selected_patch()
+
 
     def _create_widgets(self):
         # Start/Stop button, status icon and label
-        self.ready_frame = ttk.Frame(self)
-        self.ready_frame.grid(column=0, row=0, sticky='w', padx=0, pady=0)
+        self.ready_frame = ttk.Frame(self, relief='solid')
+        self.ready_frame.grid(column=0, row=0, rowspan=3, sticky='w', padx=10, pady=10)
 
         self.status_icon = tk.Canvas(self.ready_frame, width=14, height=14, highlightthickness=0)
         self.status_icon_id = self.status_icon.create_oval(2, 2, 12, 12, fill='red', outline='')
-        self.status_icon.grid(column=0, row=0, **self.options)
+        self.status_icon.grid(column=0, row=0, stick='w', padx=10, pady=(10, 5))
 
         self.ready_label = ttk.Label(self.ready_frame, textvariable=self.ready_state)
         self.ready_label.grid(column=1, row=0, sticky='w', padx=(0, 10), pady=(10, 5))
 
-        self.start_button = ttk.Button(self, text='START', command=self._on_start_button)
-        self.start_button.grid(column=0, row=1, **self.options)
+        self.start_button = ttk.Button(self.ready_frame, text='PLAY', command=self._on_start_button)
+        self.start_button.grid(column=0, row=1, columnspan=2, sticky='w', padx=10, pady=10)
 
         # Input information
         self.input_frame = ttk.Frame(self)
-        self.input_frame.grid(column=1, row=0, columnspan=2, sticky='w', padx=5)
-        self.input_label = ttk.Label(self.input_frame, text='Device:')
+        self.input_frame.grid(column=1, row=0, columnspan=2, sticky='w', padx=0)
+        self.input_label = ttk.Label(self.input_frame, text='Input Device:')
         self.input_label.grid(column=0, row=0, sticky='w', padx=5, pady=(10, 5))
         self.input_status_label = ttk.Label(self.input_frame, textvariable=self.settings.input_connection_name)
         self.input_status_label.grid(column=1, row=0, sticky='w', padx=0, pady=(10, 5))
@@ -106,21 +106,42 @@ class Header(ttk.Frame):
         self.output_status_label = ttk.Label(self.output_frame, textvariable=self.settings.output_connection_name)
         self.output_status_label.grid(column=1, row=0, sticky='w', padx=0, pady=(10, 5))
 
-        # Load patches
+        # Connections button
+        self.connections_button = ttk.Button(
+            self, 
+            text='Connections', 
+            width=9, 
+            style='DefaultTab.TButton',
+            command=self._on_connections_button
+            )
+        self.connections_button.grid(column=5, row=0, sticky='e', padx=10, pady=(10, 10))
+
+        # Separate connections from instrument
+        self.separator = ttk.Separator(self, orient=tk.HORIZONTAL)
+        self.separator.grid(column=1, row=1, columnspan=5, sticky='ew', padx=(5, 10))
+
+        # Load patches (instruments)
+        self.patches_frame = ttk.Frame(self)
+        self.patches_frame.grid(column=1, row=2, sticky='ew', columnspan=4, padx=0)
+        self.patches_frame.columnconfigure(1, weight=1)
+        self.instrument_label = ttk.Label(self.patches_frame, text='Instrument:')
+        self.instrument_label.grid(column=0, row=0, sticky='w', padx=5, pady=10)
         self.patch_menu = ttk.OptionMenu(
-            self,
+            self.patches_frame,
             self.patch_var,
             self.saved_patches_list[0],
             *self.saved_patches_list
             )
-        self.patch_menu.grid(column=1, row=1, columnspan=2, sticky='ew', padx=10, pady=(10, 5))
+        self.patch_menu.grid(column=1, row=0, sticky='ew', padx=(10, 5), pady=10)
 
-        self.load_patch_button = ttk.Button(self, text='Load', command=self._on_load_patch_button)
-        self.load_patch_button.grid(column=3, row=1, sticky='w', padx=10, pady=(10, 5))
-
-        # Toggle button to hide/show info
-        self.info_button = ttk.Button(self, text='Hide Info', command=self._on_info_button, width=7)
-        self.info_button.grid(column=4, row=1, sticky='e', padx=(10, 20), pady=(10, 5))
+        self.controls_button = ttk.Button(
+            self, 
+            text='Controls', 
+            width=9, 
+            style='DefaultTab.TButton',
+            command=self._on_controls_button
+            )
+        self.controls_button.grid(column=5, row=2, sticky='e', padx=10, pady=(10, 10))
 
     def _create_status_tracer(self, variable: tk.Variable, label: ttk.Label, **global_settings) -> None:
             """Creates a global variable tracer assigns it to a label, and passes it a Dict of arguments"""
@@ -171,21 +192,61 @@ class Header(ttk.Frame):
                 self.start_button.config(text='START')
                 return
 
-    def _update_load_patch_button_state(self, *args):
-        """Disables patch Load and Info buttons if selected patch is already loaded."""
-        selected_patch_name = self.patch_var.get()
-        if selected_patch_name == self.loaded_patch_name.get():
-            self.load_patch_button.config(state='disabled')
+    def _update_patch_menu(self, *args):
+        """Disables patch selection menu if running."""
+        running = self.running_status.get()
+        if running:
+            self.patch_menu.config(state='disabled')
         else:
-            self.load_patch_button.config(state='normal')
+            self.patch_menu.config(state='normal')
+
+    def _load_selected_patch(self, *args):
+        """Loads the patch selected in the patch menu."""
+        selected_patch_name = self.patch_var.get()
+
+        # Patch already active
+        if selected_patch_name == self.loaded_patch_name.get():
+            return
+
+        # Strip ' (default)' tag to match dictionary keys in saved_patches_data
+        clean_patch_name = selected_patch_name.replace(' (default)', '')
+
+        # Fetch patch data safely
+        patches_data = getattr(self.settings, 'saved_patches_data', {}).get('patches', {})
+        if clean_patch_name in patches_data:
+            selected_patch_data = patches_data[clean_patch_name]
+
+            # Update description StringVars
+            self.loaded_patch_description.set(selected_patch_data.get('description', ''))
+
+            # Update parameters dictionary in settings and local pointer
+            parameters = selected_patch_data.get('parameters', {})
+            self.settings.loaded_patch_parameters_data = parameters
+            self.loaded_patch_parameters_data = parameters
+
+            # Set last as it triggers mapping GUI re-draw
+            self.loaded_patch_name.set(selected_patch_name)
+
+    def _update_tabs_buttons(self, active_tab: str | None):
+        """Highlights the button of the active tab and hides the other."""
+        if active_tab == 'connections':
+            self.connections_button.config(style='ActiveTab.TButton')
+            self.controls_button.config(style='DefaultTab.TButton')
+        elif active_tab == 'controls':
+            self.controls_button.config(style='ActiveTab.TButton')
+            self.connections_button.config(style='DefaultTab.TButton')
+        else:
+            # Both closed
+            self.connections_button.config(style='DefaultTab.TButton')
+            self.controls_button.config(style='DefaultTab.TButton')
 
     def _initiate_menu(self):
-        """Set initial menu selection to the default patch, or new patch if no default."""
+        """Set initial menu selection to the default patch if any."""
         default_patch = self.default_patch.get()
-        if default_patch and default_patch in self.saved_patches_list:
-            self.patch_var.set(default_patch)
+        if default_patch and (default_patch + ' (default)') in self.saved_patches_list:
+            self.patch_var.set(default_patch + ' (default)')
         else:
-            self.patch_var.set(self.new_patch_label)
+            self.patch_var.set(self.saved_patches_list[0])
 
     def _on_start_button(self):
         running = self.settings.running_status.get()
@@ -194,28 +255,15 @@ class Header(ttk.Frame):
             self.start_button.config(text='STOP')
         else:
             self.settings.running_status.set(False)
-            self.start_button.config(text='START')
+            self.start_button.config(text='PLAY')
 
-    def _on_load_patch_button(self):
-        """Loads the patch selected in the patch menu."""
-        selected_patch_name = self.patch_var.get()
-        selected_patch_data = self.settings.saved_patches_data['patches'][selected_patch_name]
-        self.loaded_patch_description.set(selected_patch_data['description'])
-        self.loaded_patch_parameters_data = self.settings.loaded_patch_parameters_data = selected_patch_data['parameters']
-        # Set last as it triggers mapping GUI re-draw
-        self.loaded_patch_name.set(selected_patch_name)
+    def _on_connections_button(self):
+        """Toggles visibility of connections frame."""
+        self.master._toggle_tabs('connections') # type: ignore
 
-        self._update_load_patch_button_state()
-
-    def _on_info_button(self):
-        """Toggles tabs_visible variable."""
-        expanded = self.tabs_visible.get()
-        if expanded:
-            self.info_button.config(text='Show Info')
-            self.tabs_visible.set(False)
-        else:
-            self.info_button.config(text='Hide Info')
-            self.tabs_visible.set(True)
+    def _on_controls_button(self):
+        """Toggles visibility of controls frame."""
+        self.master._toggle_tabs('controls') # type: ignore
 
 
             

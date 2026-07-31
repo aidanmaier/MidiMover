@@ -18,6 +18,10 @@ class ConnectionsFrame(ttk.Frame):
         self.listener = listener
         self.midi_out = midi_out
 
+        # Configure grid
+        for i in range(2):
+            self.columnconfigure(i, weight=1)
+
         self._create_widgets()
 
         # Handle connection settings buttons
@@ -27,46 +31,42 @@ class ConnectionsFrame(ttk.Frame):
     def _create_widgets(self):
         # Device connections
         self.device_frame = DeviceFrame(self, self.settings, self.listener) # pass listener to gui
-        self.device_frame.pack(fill='x', pady=(5, 0))
-
-        # Separate device and midi connections
-        self.seperator_upper = ttk.Separator(self, orient=tk.HORIZONTAL)
-        self.seperator_upper.pack(fill='x', padx=10, pady=(15, 5))
+        self.device_frame.grid(column=0, row=0, padx=10, pady=10)
 
         # Midi connections
         self.midi_frame = MidiFrame(self, self.settings, self.midi_out) # pass midi_out to gui
-        self.midi_frame.pack(fill='x')
+        self.midi_frame.grid(column=1, row=0, padx=(0, 20), pady=10)
+
+        self.refresh_button = ttk.Button(self, text='Refresh Lists', command=self._refresh_lists)
+        self.refresh_button.grid(column=1, row=2, sticky='e', padx=(10, 20))
 
         # Separate connections from settings
         self.seperator_lower = ttk.Separator(self, orient=tk.HORIZONTAL)
-        self.seperator_lower.pack(fill='x', padx=10, pady=(15, 5))
+        self.seperator_lower.grid(column=0, row=3, columnspan=2, sticky='ew', padx=20, pady=(15, 5))
 
         # Connection settings
         self.connection_settings_frame = ttk.Frame(self)
-        self.connection_settings_frame.pack(fill='x', padx=(10, 20), pady=10)
+        self.connection_settings_frame.grid(column=0, row=3, columnspan=2, padx=(10, 20), pady=10)
 
-        self.refresh_button = ttk.Button(self.connection_settings_frame, text='Refresh Lists', command=self._refresh_lists)
-        self.refresh_button.pack(side='right')
-
-        self.reset_button = ttk.Button(self.connection_settings_frame, text='Reset All', command=self._reset_settings)
-        self.reset_button.pack(side='right', padx=10)
+        # self.reset_button = ttk.Button(self.connection_settings_frame, text='Reset All', command=self._reset_settings)
+        # self.reset_button.pack(side='right', padx=10)
         
-        self.sample_rate_label = ttk.Label(self.connection_settings_frame, text='Sample Rate:')
-        self.sample_rate_label.pack(side='left')
-        self.sample_rate_spinbox = ttk.Spinbox(self.connection_settings_frame)
-        self.sample_rate_spinbox.pack(side='left', fill='none')
-        self.hz_label = ttk.Label(self.connection_settings_frame, text='Sample Rate:')
-        self.hz_label.pack(side='left')
+        # self.sample_rate_label = ttk.Label(self.connection_settings_frame, text='Sample Rate:')
+        # self.sample_rate_label.pack(side='left')
+        # self.sample_rate_spinbox = ttk.Spinbox(self.connection_settings_frame)
+        # self.sample_rate_spinbox.pack(side='left', fill='none')
+        # self.hz_label = ttk.Label(self.connection_settings_frame, text='Sample Rate:')
+        # self.hz_label.pack(side='left')
 
     def _update_connections_settings_state(self, *args):
         """Disables connectinos settings controls if running."""
         running = self.running_status.get()
         if running:
             self.refresh_button.config(state='disabled')
-            self.reset_button.config(state='disabled')
+            # self.reset_button.config(state='disabled')
         else:
             self.refresh_button.config(state='normal')
-            self.reset_button.config(state='normal')
+            # self.reset_button.config(state='normal')
     
     def _refresh_lists(self):
         """Refreshes input and output devices lists."""

@@ -1,11 +1,24 @@
 import mido as md # type supressions needed for Backend methods
+import pygame.midi
+from threading import Lock
 from output import MidiOut
 from gui.config_frame import ConfigFrame
+
+MIDI_LOCK = Lock()
 
 # Callable functions
 def get_ports(self) -> list:
     """Returns a list of available MIDI ouput ports."""
-    return md.get_output_names() # type: ignore
+    with MIDI_LOCK:
+        try:
+            # Force Pygame MIDI to re-scan hardware ports on macOS
+            if pygame.midi.get_init():
+                pygame.midi.quit()
+            pygame.midi.init()
+            return md.get_output_names() # type: ignore
+        except Exception as e:
+            print(f"Error scanning MIDI ports via Pygame: {e}")
+            return []
 
 def connect_port(self) -> object:
     """Opens connection with selected MIDI output port."""
