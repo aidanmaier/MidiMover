@@ -1,16 +1,17 @@
 import tkinter as tk
 from tkinter import ttk
+from settings import Settings
 
 class Header(ttk.Frame):
     """Quick config header showing connection status and patch loading."""
 
-    def __init__(self, container, settings):
+    def __init__(self, container, settings: Settings):
         super().__init__(container)
 
         # Pointers to global settings
         self.settings = settings
         self.default_patch: tk.StringVar = self.settings.default_patch
-        self.saved_patches_list: list = [
+        self.saved_patches_list = [
             f"{patch} (default)" if patch == self.default_patch.get() else patch # tag default patch
             for patch in self.settings.saved_patches_list
         ]
@@ -57,7 +58,6 @@ class Header(ttk.Frame):
 
         # Auto-load default patch if any, otherwise load new patch
         self._initiate_menu()
-        # self._on_load_patch_button()
 
         # Keep output status colors in sync with connection state
         self._create_status_tracer(self.input_settings['connection_name'], self.input_status_label, **self.input_settings)
@@ -75,10 +75,14 @@ class Header(ttk.Frame):
         self._update_start_button_state()
 
         # Manage patch menu state and patch loading
-        self.running_status.trace_add('write', self._update_patch_menu)
-        self._update_patch_menu()
+        self.running_status.trace_add('write', self._update_patch_menu_state)
+        self._update_patch_menu_state()
         self.patch_var.trace_add('write', self._load_selected_patch)
         self._load_selected_patch()
+
+        # Manage patch menu list
+        self.default_patch.trace_add('write', self._update_patch_menu_items)
+        self._update_patch_menu_items()
 
         # Keep input status colors and text in sync
         self._create_status_tracer(self.input_settings['connection_name'], self.input_status_label, **self.input_settings)
@@ -142,6 +146,7 @@ class Header(ttk.Frame):
         self.patches_frame.columnconfigure(1, weight=1)
         self.instrument_label = ttk.Label(self.patches_frame, text='Instrument:')
         self.instrument_label.grid(column=0, row=0, sticky='w', padx=5, pady=10)
+
         self.patch_menu = ttk.OptionMenu(
             self.patches_frame,
             self.patch_var,
@@ -187,7 +192,7 @@ class Header(ttk.Frame):
             display_text = name
         status_label.config(foreground=color, text=display_text)
 
-    def _update_start_button_state(self, *args):
+    def _update_start_button_state(self, *args) -> None:
         """ Enables start button only if both inputs connected or have available defaults """
         input_connection = self.settings.input_connection.get()
         output_connection = self.settings.output_connection.get()
@@ -218,7 +223,31 @@ class Header(ttk.Frame):
                 self.start_button.config(text='START')
                 return
 
-    def _update_patch_menu(self, *args):
+    def _update_patch_menu_items(self, *args) -> None:
+        """Rebuilds the list of patches and updates the OptionMenu entries."""
+        # Update the local patches list with new default tags
+        self.saved_patches_list = [
+            f"{patch} (default)" if patch == self.default_patch.get() else patch # tag default patch
+            for patch in self.settings.saved_patches_list
+            ]
+
+        # Get menu reference
+        menu = self.patch_menu['menu']
+        menu.delete(0, 'end')
+
+        # Refresh menu options
+        for patch in self.saved_patches_list:
+            menu.add_command(
+                label=patch,
+                command=tk._setit(self.patch_var, patch)
+            )
+
+        # Update current selection if it matches the new default
+        default_patch_tagged = f"{self.default_patch.get()} (default)"
+        if default_patch_tagged in self.saved_patches_list:
+            self.patch_var.set(default_patch_tagged)
+
+    def _update_patch_menu_state(self, *args) -> None:
         """Disables patch selection menu if running."""
         running = self.running_status.get()
         if running:
@@ -226,16 +255,15 @@ class Header(ttk.Frame):
         else:
             self.patch_menu.config(state='normal')
 
-    def _load_selected_patch(self, *args):
-        """Loads the patch selected in the patch menu."""
-        selected_patch_name = self.patch_var.get()
+    def _load_patch(self, patch_name: str) -> None:
+        """Loads the specified patch."""
 
         # Patch already active
-        if selected_patch_name == self.loaded_patch_name.get():
+        if patch_name == self.loaded_patch_name.get():
             return
 
         # Strip ' (default)' tag to match dictionary keys in saved_patches_data
-        clean_patch_name = selected_patch_name.replace(' (default)', '')
+        clean_patch_name = patch_name.replace(' (default)', '')
 
         # Fetch patch data safely
         patches_data = getattr(self.settings, 'saved_patches_data', {}).get('patches', {})
@@ -251,9 +279,15 @@ class Header(ttk.Frame):
             self.loaded_patch_parameters_data = parameters
 
             # Set last as it triggers mapping GUI re-draw
-            self.loaded_patch_name.set(selected_patch_name)
+            self.loaded_patch_name.set(patch_name)
 
-    def _update_tabs_buttons(self, active_tab: str | None):
+    def _load_selected_patch(self, *args) -> None:
+        """Loads the patch selected in the patch menu."""
+        patch_name = self.patch_var.get()
+        self._load_patch(patch_name=patch_name)
+
+
+    def _update_tabs_buttons(self, active_tab: str | None) -> None:
         """Highlights the button of the active tab and hides the other."""
         if active_tab == 'connections':
             self.connections_button.config(style='Active.TButton')
@@ -266,7 +300,7 @@ class Header(ttk.Frame):
             self.connections_button.config(style='Default.TButton')
             self.controls_button.config(style='Default.TButton')
 
-    def _initiate_menu(self):
+    def _initiate_menu(self, *args) -> None:
         """Set initial menu selection to the default patch if any."""
         default_patch = self.default_patch.get()
         if default_patch and (default_patch + ' (default)') in self.saved_patches_list:
@@ -274,7 +308,7 @@ class Header(ttk.Frame):
         else:
             self.patch_var.set(self.saved_patches_list[0])
 
-    def _on_start_button(self):
+    def _on_start_button(self) -> None:
         running = self.settings.running_status.get()
         if not running:
             self.settings.running_status.set(True)
@@ -283,11 +317,11 @@ class Header(ttk.Frame):
             self.settings.running_status.set(False)
             self.start_button.config(text='PLAY', style='Default.TButton')
 
-    def _on_connections_button(self):
+    def _on_connections_button(self) -> None:
         """Toggles visibility of connections frame."""
         self.master._toggle_tabs('connections') # type: ignore
 
-    def _on_controls_button(self):
+    def _on_controls_button(self) -> None:
         """Toggles visibility of controls frame."""
         self.master._toggle_tabs('controls') # type: ignore
 

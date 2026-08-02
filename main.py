@@ -44,7 +44,6 @@ class App(tk.Tk):
 
         #Pointers to global settings
         self.settings = Settings(SETTINGS_FILEPATH, PATCHES_FILEPATH)
-        # self.tabs_visible: tk.BooleanVar = self.settings.tabs_visible TODO: remove
         self.running_status: tk.BooleanVar = self.settings.running_status
         self.sensors: list[str] = self.settings.sensors
         self.sample_rate: tk.IntVar = self.settings.sample_rate

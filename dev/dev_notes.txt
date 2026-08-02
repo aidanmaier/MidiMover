@@ -1,20 +1,24 @@
 TO DO:
-- BUG: handle unexpected MIDI device/port disconnect
+- BUG: handle unexpected MIDI device/port disconnect while running
+- BUG: handle unexpected network disconnect while running
 - BUG: overlap between pitch and roll sensors ???
-- BUG: zipper effect on pitch bend
 
 Header_frame
 - BUG: disable patch selection while running x
 - TODO: Fix Patch Menu behaviour and add colours (blue=selected, green=loaded) X
 - TODO: Focus Start button on startup X
 - BUG: slow Stop button behaviour
+- BUG: phantom device connection when selecting from instrument menu
 
 Connection_frame:
 - TODO: remove Connect buttons - set active device to list selection X
 - TODO: wire up set defaults buttons X
 - TODO: add WS port column to differentiate between multiple SensorServer instances on different devices
 - TODO: add Settings section below connection lists
-- BUG: restrict MIDI ports list to outputs only ??
+- BUG?: restrict MIDI ports list to outputs only
+- BUG: empty third column in list trees
+- BUG: scrollbars not showing
+
 
 Controls_frame:
 - BUG: range sliders clip out of frame right after hide info -> show info X

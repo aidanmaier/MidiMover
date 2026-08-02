@@ -1,5 +1,6 @@
 import tkinter as tk
 import os
+from pathlib import Path
 import json
 
 # Hardcoded backup defaults, immutable from within app
@@ -9,6 +10,8 @@ FACTORY_SETTINGS = {
     "input_disconnected_label" : "< Connect Device >",
     "output_disconnected_label" : "< Connect MIDI Port >",
     "default_sample_rate" : 50,
+    "default_scale" : "Major Pentatonic",
+    "default_root_note" : 2, # D
     "default_patch" : "Default Patch",
     "saved_patches_list" : [],
     "default_device" : "SensorServer._websocket._tcp.local.",
@@ -17,8 +20,8 @@ FACTORY_SETTINGS = {
 
 FACTORY_PATCHES = {
     "patches" : {
-        "< New Patch >" : {
-            "description": "A blank patch.",
+        "< new instrument >" : {
+            "description": "A blank canvas.",
             "parameters" : {
                 "0" : {
                     "input" : None,
@@ -43,13 +46,55 @@ FACTORY_PATCHES = {
     }
 }
 
+# Map note number (list index) to note name (sharps only)
+NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',]
+
+# Octave patterns for a selection of common (12-tet) scales 
+SCALE_PATTERNS = {
+    'Chromatic': [i for i in range(11)],
+    'Whole Tone': [i for i in range(0, 11, 2)],
+    'Octatonic': [0, 2, 3, 5, 6, 8, 9, 11],
+    'Major': [0, 2, 4, 5, 7, 9, 11],
+    'Lydian': [0, 2, 4, 6, 7, 9, 11],
+    'Mixolydian': [0, 2, 4, 5, 7, 9, 10],
+    'Melodic Minor': [0, 2, 3, 5, 7, 9, 11],
+    'Dorian': [0, 2, 3, 5, 7, 9, 10],
+    'Natural Minor': [0, 2, 3, 5, 7, 8, 10],
+    'Phrygian': [0, 1, 3, 5, 7, 8, 10],
+    'Harmonic Minor': [0, 2, 3, 5, 7, 8, 11],
+    'Major Pentatonic': [0, 2, 4, 7, 9],
+    'Minor Pentatonic': [0, 3, 5, 7, 10],
+    # 'Pelog': [],
+    # 'Sorog': [],
+}
+
+# Default MIDI CC controls
+CONTROL_CODES = {
+    'Mod': 1, # mod wheel
+    'Volume': 7,
+    'Filt Res': 71, # filter resonance
+    'Release': 72,
+    'Attack': 73,
+    'Filt Cut': 74, # filter cutoff
+    'Portamento': 84,
+    'Reverb': 91,
+    'Tremolo': 92,
+    'Chorus': 93,
+    'Phaser': 95,
+}
+
 class Settings:
     """Shared config for global settings."""
     # Settings object passed to all gui components so all variables are settable locally
     # tk variables refire when updated
-    def __init__(self, settings_filepath, patches_filepath):
+    def __init__(self, settings_filepath: Path, patches_filepath: Path):
+
+        # Constants
         self.settings_filepath = settings_filepath
         self.patches_filepath = patches_filepath
+        self.note_names = NOTE_NAMES
+        self.scale_patterns = SCALE_PATTERNS
+        self.control_codes = CONTROL_CODES
 
         self.saved_settings = self._load_settings()
         s = self.saved_settings
@@ -58,8 +103,29 @@ class Settings:
         p = self.saved_patches_data
 
         # Immutable app settings
-        self.input_parameter_types = ['Speed', 'Pitch', 'Yaw', 'Roll'] # plus 'Width', 'Height', 'Depth'
-        self.output_parameter_types = ['Note', 'Bend', 'Volume', 'Filt Res', 'Filt Cut']
+        self.input_parameter_types = [
+            'Speed', 
+            'Pitch', 
+            'Yaw', 
+            'Roll', 
+            'Width', 
+            'Height', 
+            'Depth', 
+            '' # blank parameter = no output
+            ]
+        self.output_parameter_types = [
+            'Note', 
+            'Volume', 
+            'Mod', # Mod wheel
+            'Filt Res', # Filter resonance
+            'Filt Cut', # Filter cutoff
+            'Reverb', 
+            'Attack', # Volume envelope attack
+            'Release', # Volume envelope release
+            'Custom 1', # Custom parameter 1
+            'Custom 2', # Custom parameter 2
+            '' # blank parameter = no output
+            ]
 
         self.ws_address: str = FACTORY_SETTINGS['ws_address']
         self.sensors: list[str] = FACTORY_SETTINGS['sensors']
@@ -68,9 +134,16 @@ class Settings:
 
         # User settings, load factory setting if missing
         self.default_sample_rate = s.get('default_sample_rate', FACTORY_SETTINGS['default_sample_rate'])
+        self.default_scale = tk.StringVar(value=s.get('default_scale', FACTORY_SETTINGS['default_scale']))
+        self.default_root_note = tk.IntVar(value=s.get('default_root_note', FACTORY_SETTINGS['default_root_note'])) # root note number
+        self.default_root_name = tk.StringVar(value=self.note_names[self.default_root_note.get()]) # root note letter
         self.default_patch = tk.StringVar(value=s.get('default_patch', FACTORY_SETTINGS['default_patch']))
         self.default_device = tk.StringVar(value=s.get('default_device', FACTORY_SETTINGS['default_device']))
         self.default_outport = tk.StringVar(value=s.get('default_outport', FACTORY_SETTINGS['default_outport']))
+
+        self.active_scale = tk.StringVar(value=self.default_scale.get())
+        self.active_root_note = tk.IntVar(value=self.default_root_note.get()) # root note number
+        self.active_root_name = tk.StringVar(value=self.note_names[self.active_root_note.get()]) # root note letter
 
         self.saved_patches_list = list(p['patches'].keys())
 
@@ -97,6 +170,8 @@ class Settings:
         self.default_device.trace_add('write', self._write_default_device)
         self.default_outport.trace_add('write', self._write_default_outport)
         self.default_patch.trace_add('write', self._write_default_patch)
+        self.default_scale.trace_add('write', self._write_default_scale_and_root)
+        self.default_root_note.trace_add('write', self._write_default_scale_and_root)
 
     def _save_settings(self, data: dict) -> None:
         """Writes settings to disk and saved_settings variable."""
@@ -169,8 +244,13 @@ class Settings:
         self.saved_settings["default_patch"] = self.default_patch.get()
         self._save_settings(self.saved_settings)
 
-    def _factory_patches_reset(self) -> None:
-        pass
+    def _write_default_scale_and_root(self, *args):
+        """Writes new default scale and root note to settings.json."""
+        self.saved_settings["default_scale"] = self.default_scale.get()
+        self.saved_settings["default_root_note"] = self.default_root_note.get()
+        self._save_settings(self.saved_settings)
+
+
 
 
 

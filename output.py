@@ -1,41 +1,64 @@
 import mido
 import asyncio
 import queue
+import numpy as np
+import tkinter as tk
 from typing import Any
-from signal_processing import calculate_magnitude, quaternion_to_euler
-from mapping import midi_map, pitchwheel_map
+from settings import Settings, SCALE_PATTERNS
+from signal_processing import calculate_magnitude
 
-# Default MIDI CC controls
-control_codes = {
-            'Mod': 1, # mod wheel
-            'Volume': 7,
-            'Filt Res': 71, # filter resonance
-            'Release': 72,
-            'Attack': 73,
-            'Filt Cut': 74, # filter cutoff
-            'Portamento': 84,
-            'Reverb': 91,
-            'Tremolo': 92,
-            'Chorus': 93,
-            'Phaser': 95,
-        }
+class Scale():
+    def __init__(self, root: int, scale_type: str) -> None:
+        """
+        Holds MIDI note values for a given scale type and root note.
+        Input values:
+            root [0..11] (C..B),
+            scale_type [valid scale types held in SCALE_PATTERNS]
+        """
+        
+        self.root = root
+        self.type = scale_type
+        self.pattern = SCALE_PATTERNS[scale_type] # degrees of the chromatic scale (1 octave)
+        self.steps = len(self.pattern) # number of degrees per octave
 
-output_mapping_functions = {
-            'Note' : lambda x: x,
-            'Bend' : pitchwheel_map,
-            'Volume' : midi_map,
-            'Filt Cut': midi_map,
-            'Filt Res': midi_map,
-        }
+        # Transpose scale to start on root and order by asc = lowest octave of scale
+        self.octave = sorted([(note + root) % 12 for note in self.pattern])
+        
+        # All scale notes falling within MIDI [0..127] range
+        full_scale = [note for note in self.octave]
+        for octave in range(1, 11):
+            for note in self.octave:
+                new_note = note + (12 * octave)
+                if new_note < 128:
+                    full_scale.append(new_note)
+        self.full = full_scale
+
+
+def midi_map(value: float, input_range: list[float], output_range: list[int] = [0, 127]) -> int:
+    """
+    Maps data within input range to output range.
+    Input values: 
+        input_range [floor, ceiling], 
+        output_range [floor, ceiling],
+    """
+
+    output_floor = output_range[0]
+    output_ceiling = output_range[1]
+
+    mapped_value = np.interp(value, input_range, output_range) # interpolate value from input to output ranges
+    limited_value = max(output_floor, min(output_ceiling, mapped_value)) # hard limit output to output range
+
+    return int(limited_value)
 
 class MidiOut():
     """Wrapper for Mido output functionality."""
     
-    def __init__(self, settings, channel: int = 0) -> None:
+    def __init__(self, settings: Settings, channel: int = 0) -> None:
         self.channel = channel
 
         # Pointers to global settings
         self.settings = settings
+        self.control_codes = settings.control_codes
 
     def open_outport(self, port_name: str) -> None:
         self._outport = mido.open_output(port_name)  # type: ignore
@@ -98,20 +121,23 @@ class MidiOut():
         """
         MIDI Control Change message
         Input values: 
-            control [valid controls held in midi.control_codes], 
+            control [valid controls held in midi.CONTROL_CODES], 
             value [0..127]
         """
         channel = self.channel
-        control_code = control_codes[control]
+        control_code = self.control_codes[control]
         cc = mido.Message('control_change', channel=channel, control=control_code, value=value )
         self._safe_send(cc)
 
 class MidiPlayer:
-    def __init__(self, settings, midi_out: MidiOut) -> None:
+    def __init__(self, settings: Settings, midi_out: MidiOut) -> None:
 
         # Pointers to global settings
         self.settings = settings
         self.midi_out = midi_out
+
+        # Track midi note_value [0..127]
+        self.previous_note = tk.IntVar(value=0)
 
         # Thread-safe queue for buffering MIDI outputs across threads
         self.midi_queue = queue.Queue()
@@ -132,6 +158,9 @@ class MidiPlayer:
             "Yaw" : yaw,
             "Pitch" : pitch,
             "Roll" : roll,
+            'Width': None, 
+            'Height': None, 
+            'Depth': None,
         }
 
         # Map input and output parameters according to loaded patch
@@ -139,7 +168,7 @@ class MidiPlayer:
 
         mapped_vals = {}
 
-        # Iterate through patch parameters
+        # Iterate through patch parameters to extract in/out mappings
         for param_id, config in patch_parameters.items():
             input_name = config.get("input", None)
             output_name = config.get("output", None)
@@ -151,12 +180,12 @@ class MidiPlayer:
                 continue
 
             # Write mapped input_value to mapped_vals
-            sensor_value = input_values.get(input_name)
-            mapping_func = output_mapping_functions[output_name]
+            sensor_value = input_values.get(input_name)            
             if sensor_value is not None:
-                output_value = mapping_func(
+                output_value = midi_map(
                     sensor_value,
-                    in_range
+                    in_range,
+                    out_range
                 )
                 mapped_vals[output_name] = output_value
 
@@ -174,17 +203,13 @@ class MidiPlayer:
                 mapped_vals: dict = self.midi_queue.get_nowait()
                 output_params = mapped_vals.keys()
 
-                # Send MIDI data
+                # Send MIDI note messages
                 if 'Note' in output_params:
                     pass # TODO: implement note control
-                if 'Bend' in output_params:
-                    self.midi_out.pitch_bend(mapped_vals['Bend'])
-                if 'Volume' in output_params:
-                    self.midi_out.cc('Volume', value=mapped_vals['Volume'])
-                if 'Filt Cut' in output_params:
-                    self.midi_out.cc('Filt Cut', value=mapped_vals['Filt Cut'])
-                if 'Filt Res' in output_params:
-                    self.midi_out.cc('Filt Res', value=mapped_vals['Filt Res'])
+
+                # Send midi CC messages
+                for param in output_params:
+                    self.midi_out.cc(param, value=mapped_vals[param])
 
                 print(mapped_vals) # DEBUG
 

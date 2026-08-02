@@ -69,11 +69,21 @@ class ConfigFrame(ttk.Frame):
         self.devices_label.grid(column=0, row=0, **self.options)
 
         # Set default device button
-        self.set_default_button = ttk.Button(self, text=f'Set Default {self.device_type}', state='normal', command=self._on_set_default)
+        self.set_default_button = ttk.Button(
+            self, text=f'Set as Default {self.device_type}', 
+            state='normal', 
+            command=self._on_set_default
+            )
         self.set_default_button.grid(column=1, row=0, sticky='e', padx=0, pady=5)
 
         # Devices list
-        self.devices_list = ttk.Treeview(self, columns=('device','status', 'default'), show='headings', height=6, selectmode='browse')
+        self.devices_list = ttk.Treeview(
+            self, 
+            columns=('device','status', 'default'), 
+            show='headings', 
+            height=6, 
+            selectmode='browse'
+            )
         self.devices_list.heading('device', text=f'{self.device_type} Name', anchor='w')
         self.devices_list.column('device', anchor='w')
         self.devices_list.heading('status', text='Connection', anchor='w')
