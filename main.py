@@ -185,7 +185,10 @@ class App(tk.Tk):
     def _poll_midi_queue(self):
         """ Drain queued MIDI output requests on Tkinter's main thread """
         if hasattr(self, 'midi_player'):
-            self.midi_player.process_queue()
+            asyncio.run_coroutine_threadsafe(
+                self.midi_player.process_queue(),
+                self._run_loop
+            )
         
         # Schedule next run in ~10ms (100Hz tick rate)
         self.after(10, self._poll_midi_queue)

@@ -10,7 +10,7 @@ from signal_processing import calculate_magnitude
 class Scale():
     def __init__(self, root: int, scale_type: str) -> None:
         """
-        Holds MIDI note values for a given scale type and root note.
+        Holds MIDI note values for a given musical scale type and root note.
         Input values:
             root [0..11] (C..B),
             scale_type [valid scale types held in SCALE_PATTERNS]
@@ -33,13 +33,12 @@ class Scale():
                     full_scale.append(new_note)
         self.full = full_scale
 
-
 def midi_map(value: float, input_range: list[float], output_range: list[int] = [0, 127]) -> int:
     """
-    Maps data within input range to output range.
-    Input values: 
-        input_range [floor, ceiling], 
-        output_range [floor, ceiling],
+    Maps continuous sensor data to discreet midi values with settable input range to output range.
+    Parameters: 
+    input_range [floor, ceiling]
+    output_range [floor, ceiling]: in midi range [0..127]
     """
 
     output_floor = output_range[0]
@@ -129,18 +128,30 @@ class MidiOut():
         cc = mido.Message('control_change', channel=channel, control=control_code, value=value )
         self._safe_send(cc)
 
+
 class MidiPlayer:
     def __init__(self, settings: Settings, midi_out: MidiOut) -> None:
 
         # Pointers to global settings
         self.settings = settings
         self.midi_out = midi_out
+        self.active_scale: tk.StringVar = self.settings.active_scale
+        self.active_root_note: tk.IntVar = self.settings.active_root_note
 
         # Track midi note_value [0..127]
         self.previous_note = tk.IntVar(value=0)
 
         # Thread-safe queue for buffering MIDI outputs across threads
         self.midi_queue = queue.Queue()
+
+        # Local active scale object
+        self.active_scale_object = Scale(self.active_root_note.get(), self.active_scale.get())
+
+        # Manage active scale object changes
+        self.settings.active_scale.trace_add('write', self._update_active_scale_object)
+        self.settings.active_root_note.trace_add('write', self._update_active_scale_object)
+        self.settings.active_root_name.trace_add('write', self._update_active_scale_object)
+        
 
     def play(self, sample: dict[str, Any]) -> None:
         """Processes sensor data samples and sends them to the thread-safe queue."""
@@ -166,7 +177,7 @@ class MidiPlayer:
         # Map input and output parameters according to loaded patch
         patch_parameters = self.settings.loaded_patch_parameters_data
 
-        mapped_vals = {}
+        mapped_vals: dict[str, int] = {}
 
         # Iterate through patch parameters to extract in/out mappings
         for param_id, config in patch_parameters.items():
@@ -189,31 +200,51 @@ class MidiPlayer:
                 )
                 mapped_vals[output_name] = output_value
 
+            # TODO: test note filter
+
+            # If Note parameter
+            if 'Note' in mapped_vals:
+                # filter for note same as previous note
+                if mapped_vals['Note'] == self.previous_note.get():
+                    mapped_vals.pop('Note')
+                    continue
+                # filter for note not in scale
+                elif mapped_vals['Note'] not in self.active_scale_object.full:
+                    mapped_vals.pop('Note')
+                    continue
+                else:
+                    self.previous_note.set(mapped_vals['Note'])
+
         # Send mapped values to the thread-safe queue
         if mapped_vals:
             self.midi_queue.put(mapped_vals)
 
-    def process_queue(self) -> None:
+    async def process_queue(self) -> None:
         """
-        Flushes queue and sends all queued MIDI messages. 
-        Must be called from the main tkinter thread.
+        Flushes queue and sends all queued MIDI messages.
+        Runs on the async loop so note playback can be scheduled correctly.
         """
         while not self.midi_queue.empty():
             try:
-                mapped_vals: dict = self.midi_queue.get_nowait()
-                output_params = mapped_vals.keys()
+                mapped_vals: dict[str, int] = self.midi_queue.get_nowait()
 
-                # Send MIDI note messages
-                if 'Note' in output_params:
-                    pass # TODO: implement note control
+                for param, value in mapped_vals.items():
+                    if param == 'Note':
+                        # Schedule MIDI note playback without blocking the queue processor.
+                        asyncio.create_task(self.midi_out.perc(value))
+                    else:
+                        # Send midi CC messages immediately.
+                        self.midi_out.cc(param, value)
 
-                # Send midi CC messages
-                for param in output_params:
-                    self.midi_out.cc(param, value=mapped_vals[param])
-
-                print(mapped_vals) # DEBUG
+                print(mapped_vals)  # DEBUG
 
             except queue.Empty:
                 break
+
+    def _update_active_scale_object(self, *args):
+        """Refreshes active scale object when scale or root note name changes."""
+        scale_type = self.active_scale.get()
+        root = self.active_root_note.get()
+        self.active_scale_object = Scale(root, scale_type)
 
             

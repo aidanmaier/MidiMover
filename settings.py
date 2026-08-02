@@ -13,7 +13,6 @@ FACTORY_SETTINGS = {
     "default_scale" : "Major Pentatonic",
     "default_root_note" : 2, # D
     "default_patch" : "Default Patch",
-    "saved_patches_list" : [],
     "default_device" : "SensorServer._websocket._tcp.local.",
     "default_outport" : "IAC Driver Bus 1"
 }
@@ -82,6 +81,7 @@ CONTROL_CODES = {
     'Chorus': 93,
     'Phaser': 95,
 }
+
 
 class Settings:
     """Shared config for global settings."""
