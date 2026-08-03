@@ -177,7 +177,7 @@ class MidiPlayer:
         # Map input and output parameters according to loaded patch
         patch_parameters = self.settings.loaded_patch_parameters_data
 
-        mapped_vals: dict[str, int] = {}
+        mapped_vals: dict[str, int | None] = {}
 
         # Iterate through patch parameters to extract in/out mappings
         for param_id, config in patch_parameters.items():
@@ -186,7 +186,7 @@ class MidiPlayer:
             in_range = config.get("input_range", [])
             out_range = config.get("output_range", [])
 
-            # Skip unused parameters
+            # Skip unused or incomplete parameters
             if not input_name or not output_name or len(in_range) < 2 or len(out_range) < 2:
                 continue
 
@@ -200,20 +200,18 @@ class MidiPlayer:
                 )
                 mapped_vals[output_name] = output_value
 
-            # TODO: test note filter
+        # Note parameter filter
+        if 'Note' in mapped_vals.keys():
+            # filter for note same as previous note
+            same_as_previous = mapped_vals['Note'] == self.previous_note.get()
+            # filter for note not in scale
+            not_in_scale = mapped_vals['Note'] not in self.active_scale_object.full
+            
+            if same_as_previous or not_in_scale:
+                mapped_vals['Note'] = None
 
-            # If Note parameter
-            if 'Note' in mapped_vals:
-                # filter for note same as previous note
-                if mapped_vals['Note'] == self.previous_note.get():
-                    mapped_vals.pop('Note')
-                    continue
-                # filter for note not in scale
-                elif mapped_vals['Note'] not in self.active_scale_object.full:
-                    mapped_vals.pop('Note')
-                    continue
-                else:
-                    self.previous_note.set(mapped_vals['Note'])
+            if mapped_vals['Note']:
+                self.previous_note.set(mapped_vals['Note'])
 
         # Send mapped values to the thread-safe queue
         if mapped_vals:
@@ -229,14 +227,15 @@ class MidiPlayer:
                 mapped_vals: dict[str, int] = self.midi_queue.get_nowait()
 
                 for param, value in mapped_vals.items():
-                    if param == 'Note':
-                        # Schedule MIDI note playback without blocking the queue processor.
-                        asyncio.create_task(self.midi_out.perc(value))
-                    else:
-                        # Send midi CC messages immediately.
-                        self.midi_out.cc(param, value)
+                    if value:
+                        if param == 'Note':
+                            # Schedule MIDI note playback without blocking the queue processor.
+                            asyncio.create_task(self.midi_out.perc(value))
+                        else:
+                            # Send midi CC messages immediately.
+                            self.midi_out.cc(param, value)
 
-                print(mapped_vals)  # DEBUG
+                # print(mapped_vals)  # DEBUG
 
             except queue.Empty:
                 break

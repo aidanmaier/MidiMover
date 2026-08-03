@@ -104,24 +104,24 @@
                     ]
                 },
                 "1": {
-                    "input": null,
+                    "input": "Yaw",
                     "input_range": [
-                        0.0,
-                        100.0
+                        -1.0,
+                        1.0
                     ],
-                    "output": null,
+                    "output": "Filt Cut",
                     "output_range": [
                         0,
                         127
                     ]
                 },
                 "2": {
-                    "input": null,
+                    "input": "Speed",
                     "input_range": [
                         0.0,
-                        100.0
+                        15.0
                     ],
-                    "output": null,
+                    "output": "Volume",
                     "output_range": [
                         0,
                         127
