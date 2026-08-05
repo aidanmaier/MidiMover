@@ -113,7 +113,7 @@ class ConfigFrame(ttk.Frame):
             
     
     def _on_device_select(self, event=None):
-        """Captures selected item name."""
+        """Captures selected item name and updates set default button state."""
         selected_items = self.devices_list.selection()
         if not selected_items:
             self.selected_device_name.set('')

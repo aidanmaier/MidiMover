@@ -10,9 +10,7 @@ FACTORY_SETTINGS = {
     "input_disconnected_label" : "< Connect Device >",
     "output_disconnected_label" : "< Connect MIDI Port >",
     "default_sample_rate" : 50,
-    "default_scale" : "Major Pentatonic",
-    "default_root_note" : 2, # D
-    "default_patch" : "Default Patch",
+    "default_patch" : "",
     "default_device" : "SensorServer._websocket._tcp.local.",
     "default_outport" : "IAC Driver Bus 1"
 }
@@ -21,24 +19,49 @@ FACTORY_PATCHES = {
     "patches" : {
         "< new instrument >" : {
             "description": "A blank canvas.",
-            "parameters" : {
-                "0" : {
-                    "input" : None,
-                    "input_range" : [],
-                    "output" : None,
-                    "output_range" : []
+            "root_note" : 2,
+            "scale": "Major",
+            "legato": False,
+            "parameters": {
+                "0": {
+                    "exponential" : False,
+                    "invert" : False,
+                    "input": None,
+                    "input_range": [],
+                    "output": None,
+                    "output_range": []
                 },
-                "1" : {
-                    "input" : None,
-                    "input_range" : [],
-                    "output" : None,
-                    "output_range" : []
+                "1": {
+                    "exponential" : False,
+                    "invert" : False,
+                    "input": None,
+                    "input_range": [],
+                    "output": None,
+                    "output_range": []
                 },
-                "2" : {
-                    "input" : None,
-                    "input_range" : [],
-                    "output" : None,
-                    "output_range" : []
+                "2": {
+                    "exponential" : False,
+                    "invert" : False,
+                    "input": None,
+                    "input_range": [],
+                    "output": None,
+                    "output_range": []
+                },
+                "3": {
+                    "exponential" : False,
+                    "invert" : False,
+                    "input": None,
+                    "input_range": [],
+                    "output": None,
+                    "output_range": []
+                },
+                "4": {
+                    "exponential" : False,
+                    "invert" : False,
+                    "input": None,
+                    "input_range": [],
+                    "output": None,
+                    "output_range": []
                 }
             }
         }
@@ -105,12 +128,9 @@ class Settings:
         # Immutable app settings
         self.input_parameter_types = [
             'Speed', 
-            'Pitch', 
-            'Yaw', 
-            'Roll', 
-            'Width', 
-            'Height', 
-            'Depth', 
+            'Tilt', 
+            'Turn', 
+            'Twist', 
             '' # blank parameter = no output
             ]
         self.output_parameter_types = [
@@ -119,11 +139,12 @@ class Settings:
             'Mod', # Mod wheel
             'Filt Res', # Filter resonance
             'Filt Cut', # Filter cutoff
-            'Reverb', 
             'Attack', # Volume envelope attack
             'Release', # Volume envelope release
             'Custom 1', # Custom parameter 1
             'Custom 2', # Custom parameter 2
+            'Custom 3', # Custom parameter 3
+            'Custom 4', # Custom parameter 4
             '' # blank parameter = no output
             ]
 
@@ -133,16 +154,13 @@ class Settings:
         self.output_disconnected_label: str = FACTORY_SETTINGS['output_disconnected_label']
 
         # User settings, load factory setting if missing
-        self.default_sample_rate = s.get('default_sample_rate', FACTORY_SETTINGS['default_sample_rate'])
-        self.default_scale = tk.StringVar(value=s.get('default_scale', FACTORY_SETTINGS['default_scale']))
-        self.default_root_note = tk.IntVar(value=s.get('default_root_note', FACTORY_SETTINGS['default_root_note'])) # root note number
-        self.default_root_name = tk.StringVar(value=self.note_names[self.default_root_note.get()]) # root note letter
+        self.default_sample_rate: int = s.get('default_sample_rate', FACTORY_SETTINGS['default_sample_rate'])
         self.default_patch = tk.StringVar(value=s.get('default_patch', FACTORY_SETTINGS['default_patch']))
         self.default_device = tk.StringVar(value=s.get('default_device', FACTORY_SETTINGS['default_device']))
         self.default_outport = tk.StringVar(value=s.get('default_outport', FACTORY_SETTINGS['default_outport']))
 
-        self.active_scale = tk.StringVar(value=self.default_scale.get())
-        self.active_root_note = tk.IntVar(value=self.default_root_note.get()) # root note number
+        self.active_scale = tk.StringVar(value='Major Pentatonic')
+        self.active_root_note = tk.IntVar(value=2) # root note number
         self.active_root_name = tk.StringVar(value=self.note_names[self.active_root_note.get()]) # root note letter
 
         self.saved_patches_list = list(p['patches'].keys())
@@ -170,8 +188,6 @@ class Settings:
         self.default_device.trace_add('write', self._write_default_device)
         self.default_outport.trace_add('write', self._write_default_outport)
         self.default_patch.trace_add('write', self._write_default_patch)
-        self.default_scale.trace_add('write', self._write_default_scale_and_root)
-        self.default_root_note.trace_add('write', self._write_default_scale_and_root)
 
     def _save_settings(self, data: dict) -> None:
         """Writes settings to disk and saved_settings variable."""
@@ -242,12 +258,6 @@ class Settings:
     def _write_default_patch(self, *args):
         """Writes new default patch to settings.json."""
         self.saved_settings["default_patch"] = self.default_patch.get()
-        self._save_settings(self.saved_settings)
-
-    def _write_default_scale_and_root(self, *args):
-        """Writes new default scale and root note to settings.json."""
-        self.saved_settings["default_scale"] = self.default_scale.get()
-        self.saved_settings["default_root_note"] = self.default_root_note.get()
         self._save_settings(self.saved_settings)
 
 

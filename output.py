@@ -33,21 +33,49 @@ class Scale():
                     full_scale.append(new_note)
         self.full = full_scale
 
-def midi_map(value: float, input_range: list[float], output_range: list[int] = [0, 127]) -> int:
+def midi_map(
+        value: float, 
+        input_range: tuple[float, float], 
+        output_range: tuple[int, int] = (0, 127),
+        invert: bool = False,
+        exponential: bool = False
+) -> int:
     """
     Maps continuous sensor data to discreet midi values with settable input range to output range.
     Parameters: 
     input_range [floor, ceiling]
     output_range [floor, ceiling]: in midi range [0..127]
+    invert: flips the mapping
+    exponential: changes mapping curve from linear to exponential
     """
+    in_min, in_max = input_range[0], input_range[1]
+    out_min, out_max = output_range[0], output_range[1]
 
-    output_floor = output_range[0]
-    output_ceiling = output_range[1]
+    # Normalize input to [0.0, 1.0]
+    if in_max == in_min:
+        norm = 0.0
+    else:
+        norm = (value - in_min) / (in_max - in_min)
+    norm = max(0.0, min(1.0, norm))
 
-    mapped_value = np.interp(value, input_range, output_range) # interpolate value from input to output ranges
-    limited_value = max(output_floor, min(output_ceiling, mapped_value)) # hard limit output to output range
+    # Invert mapping curve
+    if invert:
+        norm = 1.0 - norm
 
-    return int(limited_value)
+    # Exponential mapping
+    if exponential:
+        norm = norm ** 2
+
+    # Scale to MIDI output range [0, 127]
+    mapped = out_min + norm * (out_max - out_min)
+
+    return int(round(np.clip(mapped, 0, 127)))
+
+def snap_to_scale(pitch: int, valid_notes: list[int]) -> int:
+    """Finds the closest note in the active scale to the given MIDI pitch."""
+    if not valid_notes:
+        return pitch
+    return min(valid_notes, key=lambda note: abs(note - pitch))
 
 class MidiOut():
     """Wrapper for Mido output functionality."""
@@ -156,7 +184,7 @@ class MidiPlayer:
     def play(self, sample: dict[str, Any]) -> None:
         """Processes sensor data samples and sends them to the thread-safe queue."""
 
-        # Raw input data
+        # Raw sensor data
         acceleration: list[float] = sample['sensors']['linear_acceleration']
         rotation: list[float] = sample['sensors']['rotation_vector']
 
@@ -166,25 +194,23 @@ class MidiPlayer:
 
         input_values = {
             "Speed" : speed,
-            "Yaw" : yaw,
-            "Pitch" : pitch,
-            "Roll" : roll,
-            'Width': None, 
-            'Height': None, 
-            'Depth': None,
+            "Turn" : yaw,
+            "Tilt" : pitch,
+            "Twist" : roll, 
         }
 
         # Map input and output parameters according to loaded patch
         patch_parameters = self.settings.loaded_patch_parameters_data
-
         mapped_vals: dict[str, int | None] = {}
 
         # Iterate through patch parameters to extract in/out mappings
         for param_id, config in patch_parameters.items():
-            input_name = config.get("input", None)
-            output_name = config.get("output", None)
+            input_name = config.get("input")
+            output_name = config.get("output")
             in_range = config.get("input_range", [])
             out_range = config.get("output_range", [])
+            invert = config.get("invert", False)
+            exponential = config.get("exponential", False)
 
             # Skip unused or incomplete parameters
             if not input_name or not output_name or len(in_range) < 2 or len(out_range) < 2:
@@ -196,22 +222,26 @@ class MidiPlayer:
                 output_value = midi_map(
                     sensor_value,
                     in_range,
-                    out_range
+                    out_range,
+                    invert,
+                    exponential
                 )
                 mapped_vals[output_name] = output_value
 
-        # Note parameter filter
-        if 'Note' in mapped_vals.keys():
-            # filter for note same as previous note
-            same_as_previous = mapped_vals['Note'] == self.previous_note.get()
-            # filter for note not in scale
-            not_in_scale = mapped_vals['Note'] not in self.active_scale_object.full
-            
-            if same_as_previous or not_in_scale:
-                mapped_vals['Note'] = None
+        # TODO
+        # 3. Process Note quantization and deduplication
+        if 'Note' in mapped_vals and mapped_vals['Note'] is not None:
+            raw_pitch = mapped_vals['Note']
 
-            if mapped_vals['Note']:
-                self.previous_note.set(mapped_vals['Note'])
+            # Quantize pitch to nearest note in scale
+            quantized_pitch = snap_to_scale(raw_pitch, self.active_scale_object.full)
+
+            # Trigger only if pitch changed from previous note
+            if quantized_pitch == self.previous_note.get():
+                mapped_vals['Note'] = None
+            else:
+                mapped_vals['Note'] = quantized_pitch
+                self.previous_note.set(quantized_pitch)
 
         # Send mapped values to the thread-safe queue
         if mapped_vals:
@@ -235,7 +265,7 @@ class MidiPlayer:
                             # Send midi CC messages immediately.
                             self.midi_out.cc(param, value)
 
-                # print(mapped_vals)  # DEBUG
+                print(mapped_vals)  # DEBUG
 
             except queue.Empty:
                 break

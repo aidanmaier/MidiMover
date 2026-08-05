@@ -2,32 +2,45 @@
     "patches": {
         "< new instrument >": {
             "description": "A blank canvas.",
+            "root_note": 2,
+            "scale": "Major Pentatonic",
+            "legato": false,
             "parameters": {
                 "0": {
+                    "exponential": false,
+                    "invert": false,
                     "input": null,
                     "input_range": [],
                     "output": null,
                     "output_range": []
                 },
                 "1": {
+                    "exponential": false,
+                    "invert": false,
                     "input": null,
                     "input_range": [],
                     "output": null,
                     "output_range": []
                 },
                 "2": {
+                    "exponential": false,
+                    "invert": false,
                     "input": null,
                     "input_range": [],
                     "output": null,
                     "output_range": []
                 },
                 "3": {
+                    "exponential": false,
+                    "invert": false,
                     "input": null,
                     "input_range": [],
                     "output": null,
                     "output_range": []
                 },
                 "4": {
+                    "exponential": false,
+                    "invert": false,
                     "input": null,
                     "input_range": [],
                     "output": null,
@@ -35,26 +48,33 @@
                 }
             }
         },
-        "Sound Bow": {
+        "Sound Drawing": {
             "description": "Bowed instrument metaphor",
+            "root_note": 0,
+            "scale": "Major",
+            "legato": false,
             "parameters": {
                 "0": {
+                    "exponential": false,
+                    "invert": false,
                     "input": "Speed",
                     "input_range": [
-                        0.0,
-                        15.0
+                        0,
+                        100
                     ],
                     "output": "Volume",
                     "output_range": [
-                        0,
+                        10,
                         127
                     ]
                 },
                 "1": {
-                    "input": "Pitch",
+                    "exponential": false,
+                    "invert": true,
+                    "input": "Tilt",
                     "input_range": [
-                        -0.5,
-                        0.5
+                        -1.0,
+                        1.0
                     ],
                     "output": "Filt Cut",
                     "output_range": [
@@ -63,6 +83,8 @@
                     ]
                 },
                 "2": {
+                    "exponential": false,
+                    "invert": false,
                     "input": null,
                     "input_range": [
                         -0.5,
@@ -75,10 +97,12 @@
                     ]
                 },
                 "3": {
+                    "exponential": false,
+                    "invert": false,
                     "input": null,
                     "input_range": [
-                        0,
-                        100
+                        -1.0,
+                        1.0
                     ],
                     "output": null,
                     "output_range": [
@@ -90,9 +114,76 @@
         },
         "Air Harp": {
             "description": "Tuned percussion mapped to pitch",
+            "root_note": 2,
+            "scale": "Lydian",
+            "legato": false,
             "parameters": {
                 "0": {
-                    "input": "Pitch",
+                    "input": "Tilt",
+                    "input_range": [
+                        -0.3,
+                        0.66
+                    ],
+                    "output": "Note",
+                    "output_range": [
+                        45,
+                        99
+                    ],
+                    "mapping": false,
+                    "invert": false
+                },
+                "1": {
+                    "input": null,
+                    "input_range": [
+                        -1.0,
+                        1.0
+                    ],
+                    "output": null,
+                    "output_range": [
+                        0,
+                        127
+                    ],
+                    "mapping": false,
+                    "invert": false
+                },
+                "2": {
+                    "input": null,
+                    "input_range": [
+                        -1.0,
+                        1.0
+                    ],
+                    "output": null,
+                    "output_range": [
+                        0,
+                        127
+                    ],
+                    "mapping": false,
+                    "invert": false
+                },
+                "3": {
+                    "input": null,
+                    "input_range": [
+                        -1.0,
+                        1.0
+                    ],
+                    "output": null,
+                    "output_range": [
+                        0,
+                        127
+                    ],
+                    "mapping": false,
+                    "invert": false
+                }
+            }
+        },
+        "Patch 3": {
+            "description": "A blank canvas.",
+            "root_note": 2,
+            "scale": "Major Pentatonic",
+            "legato": false,
+            "parameters": {
+                "0": {
+                    "input": "Tilt",
                     "input_range": [
                         -1.0,
                         1.0
@@ -101,10 +192,12 @@
                     "output_range": [
                         0,
                         127
-                    ]
+                    ],
+                    "mapping": false,
+                    "invert": false
                 },
                 "1": {
-                    "input": "Yaw",
+                    "input": "Turn",
                     "input_range": [
                         -1.0,
                         1.0
@@ -113,31 +206,141 @@
                     "output_range": [
                         0,
                         127
-                    ]
+                    ],
+                    "mapping": false,
+                    "invert": false
                 },
                 "2": {
-                    "input": "Speed",
-                    "input_range": [
-                        0.0,
-                        15.0
-                    ],
-                    "output": "Volume",
-                    "output_range": [
-                        0,
-                        127
-                    ]
-                },
-                "3": {
                     "input": null,
                     "input_range": [
-                        0.0,
-                        100.0
+                        -1.0,
+                        1.0
                     ],
                     "output": null,
                     "output_range": [
                         0,
                         127
-                    ]
+                    ],
+                    "mapping": false,
+                    "invert": false
+                },
+                "3": {
+                    "input": null,
+                    "input_range": [
+                        -1.0,
+                        1.0
+                    ],
+                    "output": null,
+                    "output_range": [
+                        0,
+                        127
+                    ],
+                    "mapping": false,
+                    "invert": false
+                },
+                "4": {
+                    "exponential": false,
+                    "invert": false,
+                    "input": null,
+                    "input_range": [],
+                    "output": null,
+                    "output_range": []
+                }
+            }
+        },
+        "Patch 4": {
+            "description": "A blank canvas.",
+            "root_note": 2,
+            "scale": "Major Pentatonic",
+            "legato": false,
+            "parameters": {
+                "0": {
+                    "exponential": false,
+                    "invert": false,
+                    "input": null,
+                    "input_range": [],
+                    "output": null,
+                    "output_range": []
+                },
+                "1": {
+                    "exponential": false,
+                    "invert": false,
+                    "input": null,
+                    "input_range": [],
+                    "output": null,
+                    "output_range": []
+                },
+                "2": {
+                    "exponential": false,
+                    "invert": false,
+                    "input": null,
+                    "input_range": [],
+                    "output": null,
+                    "output_range": []
+                },
+                "3": {
+                    "exponential": false,
+                    "invert": false,
+                    "input": null,
+                    "input_range": [],
+                    "output": null,
+                    "output_range": []
+                },
+                "4": {
+                    "exponential": false,
+                    "invert": false,
+                    "input": null,
+                    "input_range": [],
+                    "output": null,
+                    "output_range": []
+                }
+            }
+        },
+        "Patch 5": {
+            "description": "A blank canvas.",
+            "root_note": 2,
+            "scale": "Major Pentatonic",
+            "legato": false,
+            "parameters": {
+                "0": {
+                    "exponential": false,
+                    "invert": false,
+                    "input": null,
+                    "input_range": [],
+                    "output": null,
+                    "output_range": []
+                },
+                "1": {
+                    "exponential": false,
+                    "invert": false,
+                    "input": null,
+                    "input_range": [],
+                    "output": null,
+                    "output_range": []
+                },
+                "2": {
+                    "exponential": false,
+                    "invert": false,
+                    "input": null,
+                    "input_range": [],
+                    "output": null,
+                    "output_range": []
+                },
+                "3": {
+                    "exponential": false,
+                    "invert": false,
+                    "input": null,
+                    "input_range": [],
+                    "output": null,
+                    "output_range": []
+                },
+                "4": {
+                    "exponential": false,
+                    "invert": false,
+                    "input": null,
+                    "input_range": [],
+                    "output": null,
+                    "output_range": []
                 }
             }
         }

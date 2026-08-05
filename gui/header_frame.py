@@ -193,9 +193,9 @@ class Header(ttk.Frame):
         status_label.config(foreground=color, text=display_text)
 
     def _update_start_button_state(self, *args) -> None:
-        """ Enables start button only if both inputs connected or have available defaults """
-        input_connection = self.settings.input_connection.get()
-        output_connection = self.settings.output_connection.get()
+        """Enables start button only if input and output are available, and sets status."""
+        input_connection = self.selected_input.get()
+        output_connection = self.selected_output.get()
         ready = bool(input_connection) and bool(output_connection)
         running = self.settings.running_status.get()
 
@@ -212,6 +212,7 @@ class Header(ttk.Frame):
 
         self.status_icon.itemconfig(self.status_icon_id, fill=icon_color)
 
+        # Set start button state
         if ready: 
             self.start_button.config(state='normal')
         else:

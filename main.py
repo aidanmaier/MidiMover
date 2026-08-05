@@ -56,7 +56,7 @@ class App(tk.Tk):
         screen_height = self.winfo_screenheight()
         self.window_width = 760
         self.window_min_height = 120 # height when config tabs closed
-        self.window_max_height = 620 #height when config tabs open
+        self.window_max_height = 640 #height when config tabs open
         offset_x = (screen_width - self.window_width) // 2 # distance to screen center - distance to window center
         offset_y = (screen_height - self.window_max_height) // 2         
 
@@ -116,18 +116,18 @@ class App(tk.Tk):
         # Keep text legible when clicked
         self.style.map(
             'Active.TButton',
-            background=[('pressed', '#005a9e'), ('active', '#0078d7')],
-            foreground=[('pressed', 'white'), ('active', 'white')]
+            background=[('disabled', 'light grey'), ('pressed', '#005a9e'), ('active', '#0078d7')],
+            foreground=[('disabled', '#a0a0a0'), ('pressed', 'white'), ('active', 'white')]
         )
 
         # Default style for inactive button
         self.style.configure(
             'Default.TButton',
-            foreground='black'  # Ensure default text color is explicitly visible
+            foreground='black'
         )
         self.style.map(
             'Default.TButton',
-            foreground=[('pressed', 'black'), ('active', 'black')]
+            foreground=[('disabled', '#a0a0a0'), ('pressed', 'black'), ('active', 'black')]
         )
 
     def _toggle_tabs(self, panel_name:str):

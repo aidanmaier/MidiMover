@@ -15,10 +15,6 @@ class ControlsFrame(ttk.Frame):
         self.scale_patterns: dict[str, Any] = self.settings.scale_patterns
         self.input_parameter_types: list[str] = self.settings.input_parameter_types
         self.output_parameter_types: list[str] = self.settings.output_parameter_types
-
-        self.default_scale: tk.StringVar = self.settings.default_scale
-        self.default_root_note: tk.IntVar = self.settings.default_root_note # root note number
-        self.default_root_name: tk.StringVar = self.settings.default_root_name
         self.default_patch: tk.StringVar = self.settings.default_patch
 
         self.loaded_patch_name: tk.StringVar = self.settings.loaded_patch_name
@@ -48,7 +44,6 @@ class ControlsFrame(ttk.Frame):
         # Configure grid
         for i in range(3):
             self.columnconfigure(i, weight=1)
-        self.rowconfigure(3, weight=1) # control mapping header
 
         self._create_widgets()
         
@@ -64,11 +59,10 @@ class ControlsFrame(ttk.Frame):
         self.loaded_patch_name.trace_add('write', self._update_default_patch_button)
         self._update_default_patch_button()
 
-        # Handle default scale or root note changes
-        self.active_scale.trace_add('write', self._update_default_scale_button_state)
-        self.active_root_name.trace_add('write', self._update_default_scale_button_state)
+        # Handle scale and root changes
         self.active_root_name.trace_add('write', self._update_active_root_note)
-        self._update_default_scale_button_state()
+        self.active_scale.trace_add('write', lambda *args: self._on_parameter_change())
+        self.active_root_name.trace_add('write', lambda *args: self._on_parameter_change())
     
     def _create_widgets(self):
         # Patch info
@@ -78,13 +72,6 @@ class ControlsFrame(ttk.Frame):
         self.patch_name_label.pack(side='left')
         self.patch_name = ttk.Label(self.patch_name_frame, textvariable=self.cleaned_loaded_patch_name)
         self.patch_name.pack(side='left')
-
-        self.patch_description_frame = ttk.Frame(self)
-        self.patch_description_frame.grid(column=0, row=1, columnspan=3, sticky='ew', padx=10, pady=5)
-        self.patch_description_label = ttk.Label(self.patch_description_frame, text='Description:', width=10)
-        self.patch_description_label.pack(side='left')
-        self.patch_description = ttk.Label(self.patch_description_frame, textvariable=self.loaded_patch_description)
-        self.patch_description.pack(side='left')
 
         # Save/Reset/Set Default buttons
         self.patch_button_frame = ttk.Frame(self)
@@ -114,33 +101,41 @@ class ControlsFrame(ttk.Frame):
             )
         self.default_patch_button.grid(column=2, row=0, sticky='e', padx=0, pady=(10, 5))
 
-        # Separate patch info from control mapping
-        self.seperator_upper = ttk.Separator(self, orient=tk.HORIZONTAL)
-        self.seperator_upper.grid(column=0, row=2, columnspan=3, sticky='ew', padx=10, pady=(10, 5))
+        # Patch description
+        self.patch_description_frame = ttk.Frame(self)
+        self.patch_description_frame.grid(column=0, row=1, columnspan=3, sticky='ew', padx=10, pady=5)
+        self.patch_description_label = ttk.Label(self.patch_description_frame, text='Description:', width=10)
+        self.patch_description_label.pack(side='left')
+        self.patch_description = ttk.Label(self.patch_description_frame, textvariable=self.loaded_patch_description)
+        self.patch_description.pack(side='left')
 
-        # Control mapping
+        # Separate description from controls
+        self.separator_upper = ttk.Separator(self, orient=tk.HORIZONTAL)
+        self.separator_upper.grid(column=0, row=2, columnspan=3, sticky='ew', padx=10, pady=(10, 5))
+
+        # Parameter mapping header
+        self.parameters_header = ttk.Frame(self)
+        self.parameters_header.grid(column=0, row=3, columnspan=3, sticky='ew')
+
+        self.input_param_label = ttk.Label(self.parameters_header, text='Motion Parameters', width=33)
+        self.input_param_label.grid(column=0, row=0, sticky='w', padx=10, pady=0)
+        self.map_param_label = ttk.Label(self.parameters_header, text='map to -->', width=10)
+        self.map_param_label.grid(column=1, row=0, sticky='w', padx=(10, 0), pady=0)
+        self.output_param_label = ttk.Label(self.parameters_header, text='MIDI Parameters', width=30)
+        self.output_param_label.grid(column=2, row=0, sticky='w', padx=(6, 10), pady=0)
+
+        self.separator_lower = ttk.Separator(self, orient=tk.HORIZONTAL)
+        self.separator_lower.grid(column=0, row=4, columnspan=3, sticky='ew', padx=10, pady=(5, 0))
+
+        # Parameter mapping controls
         self.parameters_frame = ttk.Frame(self)
-        self.parameters_frame.grid(column=0, row=3, columnspan=3, sticky='nsew')
-        self.parameters_frame.columnconfigure(0, weight=1) # Input frame
-        self.parameters_frame.columnconfigure(1, weight=0) # Separator column
-        self.parameters_frame.columnconfigure(2, weight=1) # Output frame
-        self.parameters_frame.rowconfigure(0, weight=1)
-
-        self.input_mapping_frame = self._build_mapping_frame(0, 'Input')
-
-        # Separate input and output mapping
-        self.seperator_vert = ttk.Separator(self.parameters_frame, orient=tk.VERTICAL)
-        self.seperator_vert.grid(column=1, row=0, sticky='ns', padx=5, pady=(0, 5))
-
-        self.output_mapping_frame = self._build_mapping_frame(2, 'Output')
-
-        # Separate mapping from scale settings
-        self.seperator_lower = ttk.Separator(self.parameters_frame, orient=tk.HORIZONTAL)
-        self.seperator_lower.grid(column=0, row=4, columnspan=3, sticky='ew', padx=10, pady=5)
+        self.parameters_frame.grid(column=0, row=5, columnspan=3, sticky='nsew')
+        for i in range(3):
+            self.parameters_frame.columnconfigure(i)
 
         # Musical scale settings
         self.scale_frame = ttk.Frame(self)
-        self.scale_frame.grid(column=0, row=5, columnspan=2, sticky='ew')
+        self.scale_frame.grid(column=0, row=6, columnspan=2, sticky='ew')
         self.scale_frame.columnconfigure(0, weight=1)
         self.scale_frame.columnconfigure(1, weight=2)
         self.scale_frame.columnconfigure(2, weight=1)
@@ -169,27 +164,176 @@ class ControlsFrame(ttk.Frame):
         )
         self.scale_var_selector.grid(column=3, row=0, sticky='w', padx=10, pady=10)
 
-        self.default_scale_frame = ttk.Frame(self)
-        self.default_scale_frame.grid(column=2, row=5, columnspan=2, sticky='ew')
-        self.default_scale_frame.columnconfigure(0)
-        self.default_scale_frame.columnconfigure(1)
-        self.default_scale_frame.columnconfigure(2)
+    def _build_parameter_controls(self, index: int) -> None:
+        """Builds input/output parameter mapping controls."""
 
-        self.default_scale_button = ttk.Button(
-            self.default_scale_frame, 
-            text='Set as Default Scale',
-            state='disabled', 
-            width=14,
-            command=self._on_default_scale_button
+        # Ensure the index key exists in patch data before reading
+        str_index = str(index)
+        param_data = self.loaded_patch_parameters_data.get(
+            str_index, 
+            # default parameter values:
+            {
+                'mapping': False,
+                'invert': False,
+                'input': None, 
+                'input_range': [-1, 1], 
+                'output': None, 
+                'output_range': [0, 127],
+            } 
+        )
+
+        # Guards for missing values
+        mapping_bool: bool = param_data.get('mapping', False)
+        invert_bool: bool = param_data.get('invert', False)
+        input_param: str | None = param_data.get('input', None)
+        input_range: list = param_data.get('input_range') if len(param_data.get('input_range', [])) > 1 else [0, 100]
+        output_param: str | None = param_data.get('output', None)
+        output_range: list = param_data.get('output_range') if len(param_data.get('output_range', [])) > 1 else [0, 127]
+
+        # Parameter mapping frame
+        mapping_frame = ttk.Frame(self.parameters_frame)
+        mapping_frame.grid(column=0, row=index, sticky='ew', padx=(2, 0))
+
+        # Input parameter
+        input_param_frame = ttk.Frame(mapping_frame)
+        input_param_frame.grid(column=0, row=0, sticky='w', pady=5)
+
+        input_param_var = tk.StringVar(value=input_param)
+        input_param_selector = ttk.Combobox(
+            input_param_frame,
+            textvariable=input_param_var,
+            values=[],
+            width=6,
+            state='readonly',
+        )
+        input_param_selector.grid(column=0, row=0, sticky='w', padx=10, pady=5)
+        # Pass row index to callback
+        input_param_selector.bind('<<ComboboxSelected>>', lambda e, i=index: self._on_type_selected(i))
+
+        # Set input slider boundaries according to input sensor type
+        if input_param == 'Speed':
+            low_bound, high_bound = 0.0, 100.0
+        else:
+            low_bound, high_bound = -1.0, 1.0
+
+        input_range_frame = ttk.Frame(input_param_frame)
+        input_range_frame.grid(column=0, row=1, padx=(0, 0))
+        input_range_label = ttk.Label(
+            input_range_frame, 
+            text=f'{low_bound:3.2f} : {high_bound:3.2f}' if not input_param 
+                else f'{input_range[0]:3.2f} : {input_range[1]:3.2f}'
             )
-        self.default_scale_button.grid(column=0, row=0, sticky='w', padx=5, pady=10)
+        input_range_label.grid(column=2, row=0)
 
-        self.default_scale_label = ttk.Label(self.default_scale_frame, text='Default:')
-        self.default_scale_label.grid(column=1, row=0, sticky='w', padx=5, pady=10)
-        self.default_root_var_label = ttk.Label(self.default_scale_frame, textvariable=self.default_root_name, width=3)
-        self.default_root_var_label.grid(column=2, row=0, sticky='w', padx=0, pady=10)
-        self.default_scale_var_label = ttk.Label(self.default_scale_frame, textvariable=self.default_scale, width=12)
-        self.default_scale_var_label.grid(column=3, row=0, sticky='w', padx=(0, 10), pady=10)
+        # Calculate current initial values as percentage steps [0, 100]
+        span = high_bound - low_bound
+        start_low = int(round(((input_range[0] - low_bound) / span) * 100))
+        start_high = int(round(((input_range[1] - low_bound) / span) * 100))
+
+        # Clamp initial steps to [0, 100]
+        start_low = max(0, min(100, start_low))
+        start_high = max(0, min(100, start_high))
+            
+        input_param_slider = RangeSlider(
+            input_param_frame,
+            from_=0,
+            to=100,
+            low=start_low,
+            high=start_high,
+            min_range=5,
+            width=200,
+            # Pass row index, low, and high values to callback
+            command=lambda lo, hi, idx=index, lb=low_bound, hb=high_bound: 
+                self._on_slider_change(idx, 'input_range', lo, hi, lb, hb)
+        )
+        input_param_slider.grid(column=1, row=1, sticky='w', padx=10, pady=5)
+
+        # Connector
+        connector_param_frame = ttk.Frame(mapping_frame)
+        connector_param_frame.grid(column=1, row=0, sticky='w')
+
+        connector_sep_l = ttk.Separator(connector_param_frame, orient=tk.VERTICAL)
+        connector_sep_l.grid(column=0, row=0, rowspan=2, sticky='ns', padx=5, pady=20)
+
+        connector_mapping_var = tk.BooleanVar(value=mapping_bool)
+        connector_mapping_button = ttk.Button(
+            connector_param_frame, 
+            text='Exp.' if mapping_bool else 'Linear', 
+            width=7,
+            command=lambda idx=index: self._on_connector_mapping_button(idx,connector_mapping_var )
+            )
+        connector_mapping_button.grid(column=1, row=0, sticky='w', padx=5, pady=5)
+
+        connector_invert_var = tk.BooleanVar(value=invert_bool)
+        connector_invert_button = ttk.Button(
+            connector_param_frame, 
+            text='Invert', 
+            width=4, 
+            style='Active.TButton' if invert_bool else 'Default.TButton',
+            command=lambda idx=index: self._on_connector_invert_button(idx, connector_invert_var)
+            )
+        connector_invert_button.grid(column=1, row=1, sticky='ew', padx=5, pady=(5, 7))
+
+        connector_sep_r = ttk.Separator(connector_param_frame, orient=tk.VERTICAL)
+        connector_sep_r.grid(column=2, row=0, rowspan=2, sticky='ns', padx=5, pady=20)
+
+        # Output parameter
+        output_param_frame = ttk.Frame(mapping_frame)
+        output_param_frame.grid(column=2, row=0, sticky='w', pady=5)
+
+        output_param_var = tk.StringVar(value=output_param)
+        output_param_selector = ttk.Combobox(
+            output_param_frame,
+            textvariable=output_param_var,
+            values=[],
+            width=6,
+            state='readonly',
+        )
+        output_param_selector.grid(column=0, row=0, sticky='w', padx=10, pady=5)
+        # Pass row index to callback
+        output_param_selector.bind('<<ComboboxSelected>>', lambda e, idx=index: self._on_type_selected(idx))
+
+        output_range_frame = ttk.Frame(output_param_frame)
+        output_range_frame.grid(column=0, row=1, padx=(0, 0))
+        output_range_label = ttk.Label(
+            output_range_frame, 
+            text=f'{output_range[0]} : {output_range[1]}'
+            )
+        output_range_label.grid(column=0, row=0)
+
+        output_param_slider = RangeSlider(
+            output_param_frame,
+            from_=0,
+            to=127, # midi range
+            low=output_range[0],
+            high=output_range[1],
+            width=200,
+            min_range=5,
+            # Pass row index, low, and high values to callback
+            command=lambda lo, hi, idx=index: self._on_slider_change(idx, 'output_range', lo, hi)
+        )
+        output_param_slider.grid(column=1, row=1, sticky='w', padx=10, pady=5)
+
+        # Separate parameter rows
+        separator_under = ttk.Separator(mapping_frame, orient=tk.HORIZONTAL)
+        separator_under.grid(column=0, row=1, columnspan=3, sticky='ew', padx=10, pady=0)
+
+        # Keep references alive
+        self.parameter_selector_widgets.append(((input_param_var, input_param_selector), (output_param_var, output_param_selector)))
+        self.parameter_slider_widgets.append({
+            'input_slider': input_param_slider,
+            'input_label': input_range_label,
+            'output_slider': output_param_slider,
+            'output_label': output_range_label,
+            'mapping_button': connector_mapping_button,
+            'mapping_var': connector_mapping_var,
+            'invert_button': connector_invert_button,
+            'invert_var': connector_invert_var,
+        })
+
+        # Set initial slider state based on loaded values and update local patch data
+        self._update_slider_states(index)
+        self._sync_row_data(index)
 
     def _refresh_available_types(self) -> None:
         """Handles available parameter types across all rows so no type can be used more than once."""
@@ -217,142 +361,109 @@ class ControlsFrame(ttk.Frame):
             ]
             out_sel['values'] = available_output
 
-    def _build_mapping_frame(self, col, connection):
-        """Builds frame to hold input or output parameter controls."""
-        frame = ttk.Frame(self.parameters_frame)
-        frame.grid(column=col, row=0, sticky='nsew')
-        frame.columnconfigure(0, weight=1)
-        frame.columnconfigure(1, weight=2)
-
-        parameter_label = ttk.Label(frame, text=f'{connection}')
-        parameter_label.grid(column=0, row=0, sticky='w', padx=10, pady=0)
-
-        range_label = ttk.Label(frame, text='Range')
-        range_label.grid(column=1, row=0, sticky='w', padx=10, pady=0)
-
-        self.separator = ttk.Separator(frame, orient=tk.HORIZONTAL)
-        self.separator.grid(column=0, row=1, columnspan=2, sticky='ew', padx=10, pady=(10, 5))
-
-        return frame
-
-    def _build_parameter_controls(self, index, input_frame, output_frame):
-        """Builds input/output parameter mapping controls."""
-        # Ensure the index key exists in dictionary before reading
-        str_index = str(index)
-        param_data = self.loaded_patch_parameters_data.get(
-            str_index, 
-            {'input': None, 'input_range': [0, 100], 'output': None, 'output_range': [0, 100]} # default parameter values
-        )
-        row = index + 2  # add widgets on rows 2 to 5
-
-        # Guards for empty values
-        input_param = param_data.get('input', None)
-        input_range = param_data.get('input_range') if len(param_data.get('input_range', [])) > 1 else [0, 100]
-        output_param = param_data.get('output', None)
-        output_range = param_data.get('output_range') if len(param_data.get('output_range', [])) > 1 else [0, 100]
-
-        input_param_var = tk.StringVar(value=input_param)
-        input_param_selector = ttk.Combobox(
-            input_frame,
-            textvariable=input_param_var,
-            values=[],
-            width=6,
-            state='readonly',
-        )
-        input_param_selector.grid(column=0, row=row, sticky='w', padx=(10, 0), pady=15)
-        # Pass row index to callback
-        input_param_selector.bind('<<ComboboxSelected>>', lambda e, idx=index: self._on_type_selected(idx))
-
-        input_param_slider = RangeSlider(
-            input_frame,
-            from_=0,
-            to=127,
-            low=input_range[0],
-            high=input_range[1],
-            width=200,
-            # Pass row index, low, and high values to callback
-            command=lambda lo, hi, idx=index: self._on_slider_change(idx, 'input_range', lo, hi)
-        )
-        input_param_slider.grid(column=1, row=row, sticky='ew', padx=(5, 10), pady=15)
-
-        output_param_var = tk.StringVar(value=output_param)
-        output_param_selector = ttk.Combobox(
-            output_frame,
-            textvariable=output_param_var,
-            values=[],
-            width=6,
-            state='readonly',
-        )
-        output_param_selector.grid(column=0, row=row, sticky='w', padx=(10, 0), pady=15)
-        # Pass row index to callback
-        output_param_selector.bind('<<ComboboxSelected>>', lambda e, idx=index: self._on_type_selected(idx))
-
-        output_param_slider = RangeSlider(
-            output_frame,
-            from_=0,
-            to=127, # midi range
-            low=output_range[0],
-            high=output_range[1],
-            width=200,
-            # Pass row index, low, and high values to callback
-            command=lambda lo, hi, idx=index: self._on_slider_change(idx, 'output_range', lo, hi)
-        )
-        output_param_slider.grid(column=1, row=row, sticky='ew', padx=(5, 10), pady=15)
-
-        # Keep references alive
-        self.parameter_selector_widgets.append(((input_param_var, input_param_selector), (output_param_var, output_param_selector)))
-        self.parameter_slider_widgets.append((input_param_slider, output_param_slider))
-
     def _sync_row_data(self, index: int):
-        """Updates dictionary entry for a specific row index from its current widget values."""
+        """Updates loaded patch data for a specific parameter widget row."""
+
+        # Access parameter control widgets
         str_index = str(index)
         (in_var, _), (out_var, _) = self.parameter_selector_widgets[index]
-        in_slider, out_slider = self.parameter_slider_widgets[index]
+        widgets = self.parameter_slider_widgets[index]
+        in_slider = widgets['input_slider']
+        out_slider = widgets['output_slider']
 
-        # Ensure dictionary entry exists
+        # Check dictionary key entry exists
         if str_index not in self.loaded_patch_parameters_data:
             self.loaded_patch_parameters_data[str_index] = {}
 
-        # Update dictionary values directly
-        in_low = in_slider.low_var.get()
-        in_high =in_slider.high_var.get()
-        out_low = out_slider.low_var.get()
-        out_high =out_slider.high_var.get()
+        # Parameter selector variables
+        input_param = in_var.get() or None
+        output_param = out_var.get() or None
 
-        self.loaded_patch_parameters_data[str_index]['input'] = in_var.get() or None
-        self.loaded_patch_parameters_data[str_index]['input_range'] = [int(in_low), int(in_high)]
-        self.loaded_patch_parameters_data[str_index]['output'] = out_var.get() or None
-        self.loaded_patch_parameters_data[str_index]['output_range'] = [int(out_low), int(out_high)]
+        # Determine sensor boundary range
+        low_bound, high_bound = (0.0, 100.0) if input_param == 'Speed' else (-1.0, 1.0)
+        span = high_bound - low_bound
+
+        # Map input slider percentage [0..100] sensor bounds
+        in_low_pct = in_slider.low_var.get()
+        in_high_pct = in_slider.high_var.get()
+        actual_in_low = round(low_bound + (in_low_pct / 100.0) * span, 2)
+        actual_in_high = round(low_bound + (in_high_pct / 100.0) * span, 2)
+
+        # Output MIDI range
+        out_low = int(out_slider.low_var.get())
+        out_high = int(out_slider.high_var.get())
+
+        # Update patch parameter dictionary
+        self.loaded_patch_parameters_data[str_index] = {
+            'input': input_param,
+            'input_range': [actual_in_low, actual_in_high],
+            'output': output_param,
+            'output_range': [out_low, out_high],
+            'mapping': widgets['mapping_var'].get(),
+            'invert': widgets['invert_var'].get(),
+        }
 
     def _on_type_selected(self, index: int) -> None:
         """Called when a parameter-type combobox selection changes."""
         self._sync_row_data(index)
         self._refresh_available_types()
+        self._update_slider_states(index)
         self._on_parameter_change()
 
-    def _on_slider_change(self, index: int, range_key: str, low: float, high: float) -> None:
+    def _on_slider_change(self, 
+                          index: int, 
+                          range_key: str, 
+                          low: float, 
+                          high: float,
+                          low_bound: float = 0.0,
+                          high_bound: float = 127.0,
+    ) -> None:
         """Called when a range slider changes."""
         str_index = str(index)
         if str_index not in self.loaded_patch_parameters_data:
             self.loaded_patch_parameters_data[str_index] = {}
 
-        # if range_key == 'input_range
+        # Update the GUI Label corresponding to the modified slider
+        widgets = self.parameter_slider_widgets[index]
 
-        self.loaded_patch_parameters_data[str_index][range_key] = [low, high]
+        if range_key == 'input_range':
+            # Map step integers [0, 100] back to target floats
+            actual_low = low_bound + (low / 100.0) * (high_bound - low_bound)
+            actual_high = low_bound + (high / 100.0) * (high_bound - low_bound)
+
+            widgets['input_label'].config(text=f'{actual_low:3.2f} : {actual_high:3.2f}')
+            self.loaded_patch_parameters_data[str_index][range_key] = [round(actual_low, 2), round(actual_high, 2)]
+
+        elif range_key == 'output_range':
+            # Output range is already MIDI [0, 127]
+            actual_low = int(low)
+            actual_high = int(high)
+
+            widgets['output_label'].config(text=f'{actual_low} : {actual_high}')
+            self.loaded_patch_parameters_data[str_index][range_key] = [actual_low, actual_high]   
+              
         self._on_parameter_change()
 
     def _update_parameter_list(self, *args) -> None:
         """Refreshes patch data, clears and rebuilds parameter controls."""
         loaded_patch = self.loaded_patch_name.get()
-        self.cleaned_loaded_patch_name.set(loaded_patch.removesuffix(' (default)'))
+        cleaned_name = loaded_patch.removesuffix(' (default)')
+        self.cleaned_loaded_patch_name.set(cleaned_name)    
 
-        # Destroy existing parameter control widgets
-        for (in_var, in_sel), (out_var, out_sel) in self.parameter_selector_widgets:
-            in_sel.destroy()
-            out_sel.destroy()
-        for in_slider, out_slider in self.parameter_slider_widgets:
-            in_slider.destroy()
-            out_slider.destroy()
+        # Sync scale and root note from saved patch data
+        patch_info = self.settings.saved_patches_data.get('patches', {}).get(cleaned_name, {})
+        if patch_info:
+            if 'scale' in patch_info:
+                self.active_scale.set(patch_info['scale'])
+            
+            if 'root_note' in patch_info:
+                root_note = patch_info['root_note']
+                self.active_root_name.set(self.note_names[root_note])
+
+        # Destroy all child widgets in parameters_frame 
+        for child in self.parameters_frame.winfo_children():
+            child.destroy()
+
         self.parameter_selector_widgets.clear()
         self.parameter_slider_widgets.clear()
 
@@ -360,21 +471,11 @@ class ControlsFrame(ttk.Frame):
 
         # Parameter controls
         for i in range(4):
-            self._build_parameter_controls(i, self.input_mapping_frame, self.output_mapping_frame)
+            self._build_parameter_controls(i)
 
-        # Populate dropdown values now that all rows/selections exist
+        # Populate dropdown values 
         self._refresh_available_types()
         self.patch_altered.set(False)
-
-    def _update_default_scale_button_state(self, *args) -> None:
-        """Disables set default scale button if default already loaded."""
-        matching_scales = self.active_scale.get() == self.default_scale.get()
-        matching_roots = self.active_root_note.get() == self.default_root_note.get()
-
-        if matching_scales and matching_roots:
-            self.default_scale_button.config(state='disabled')
-        else:
-            self.default_scale_button.config(state='normal')
         
     def _update_patch_button_states(self, *args) -> None:
         """Disables save patch button if no changes have been made."""
@@ -396,14 +497,13 @@ class ControlsFrame(ttk.Frame):
             self.default_patch_button.config(state='normal')
 
     def _update_active_root_note(self, *args):
-        """Updates actvie root note based on active root name."""
+        """Updates active root note based on selected root name."""
         new_root_note = self.note_names.index(self.active_root_name.get())
         self.active_root_note.set(new_root_note)
 
     def _on_parameter_change(self) -> None:
         """Flag parameter settings changes to activate Save Patch button."""
         self.patch_altered.set(True)
-
 
     def _on_save_patch_button(self) -> None:
         """Saves current patch parameter configuration to Settings and settings.json."""
@@ -412,6 +512,8 @@ class ControlsFrame(ttk.Frame):
         # Update active patch data inside Settings.saved_patches_data
         if patch_name in self.settings.saved_patches_data.get('patches', {}):
             self.settings.saved_patches_data['patches'][patch_name]['parameters'] = self.loaded_patch_parameters_data
+            self.settings.saved_patches_data['patches'][patch_name]['root_note'] = self.active_root_note.get()
+            self.settings.saved_patches_data['patches'][patch_name]['scale'] = self.active_scale.get()
             
             # Save patches file to json
             with open(self.settings.patches_filepath, 'w') as f:
@@ -431,15 +533,78 @@ class ControlsFrame(ttk.Frame):
         loaded_patch = self.loaded_patch_name.get().removesuffix(' (default)')
         self.default_patch.set(loaded_patch)
 
-    def _on_default_scale_button(self) -> None:
-        """Saves active scale and root note as defaults Settings"""
-        # Update default scale and root in settings
-        active_scale = self.active_scale.get()
-        active_root_note = self.active_root_note.get()
-        active_root_name = self.active_root_name.get()
-        self.default_scale.set(active_scale)
-        self.default_root_note.set(active_root_note)
-        self.default_root_name.set(active_root_name)
+    def _update_slider_states(self, index: int) -> None:
+        """Disables and resets sliders if their corresponding combobox selector is empty."""
+        (in_var, _), (out_var, _) = self.parameter_selector_widgets[index]
+        widgets = self.parameter_slider_widgets[index]
+        in_slider = widgets['input_slider']
+        in_label = widgets['input_label']
+        out_slider = widgets['output_slider']
+        out_label = widgets['output_label']
+
+        # Only enable mapping and invert buttons if both parameters set
+        mapping_button = widgets['mapping_button']
+        invert_button = widgets['invert_button']
+        button_state = 'normal' if bool(in_var.get() and out_var.get()) else 'disabled'
+        mapping_button.configure(state=button_state)
+        invert_button.configure(state=button_state)
+
+        # Disable input slider if input parameter is empty
+        if not in_var.get():
+            in_slider.configure(state='disabled')
+            in_slider.set_range(in_slider.from_, in_slider.to)
+            low_bound, high_bound = (-1.0, 1.0)
+            in_label.config(text=f'{low_bound:3.2f} : {high_bound:3.2f}')
+        else:
+            in_slider.configure(state='normal')
+
+        # Disable output slider if output parameter is empty
+        if not out_var.get():
+            out_slider.configure(state='disabled')
+            out_slider.set_range(out_slider.from_, out_slider.to)
+            out_label.config(text=f'{int(out_slider.from_)} : {int(out_slider.to)}')
+        else:
+            out_slider.configure(state='normal')
+
+    def _on_connector_mapping_button(self, index: int, toggle_var: tk.BooleanVar) -> None:
+        """Toggles the parameter mapping between linear and exponential."""
+        widgets = self.parameter_slider_widgets[index]
+        mapping_button = widgets['mapping_button']
+        mapping_var = widgets['mapping_var']
+        
+        # Flip current toggle state
+        new_state = not mapping_var.get()
+        mapping_var.set(new_state)
+
+        # Update visual button label
+        if new_state:
+            mapping_button.config(text='Exp.')
+        else:
+            mapping_button.config(text='Linear')
+
+        # Flag patch changes and update parameter data
+        self._sync_row_data(index)
+        self._on_parameter_change()
+
+    def _on_connector_invert_button(self, index: int, toggle_var: tk.BooleanVar) -> None:
+        """Inverts the output parameter mapping range and updates patch state."""
+        widgets = self.parameter_slider_widgets[index]
+        invert_button = widgets['invert_button']
+        invert_var = widgets['invert_var']
+
+        # Flip current toggle state
+        new_state = not invert_var.get()
+        invert_var.set(new_state)
+
+        # Update visual button label
+        if new_state:
+            invert_button.config(style='Active.TButton')
+        else:
+            invert_button.config(style='Default.TButton')
+
+        # Flag patch changes and update parameter data
+        self._sync_row_data(index)
+        self._on_parameter_change()
 
 
         

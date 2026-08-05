@@ -7,9 +7,15 @@
     "input_disconnected_label": "< Connect Device >",
     "output_disconnected_label": "< Connect MIDI Port >",
     "default_sample_rate": 50,
-    "default_scale": "Minor Pentatonic",
-    "default_root_note": 2,
     "default_patch": "Air Harp",
+    "saved_patches_list": [
+        "< new instrument >",
+        "Sound Drawing",
+        "Air Harp",
+        "Patch 3",
+        "Patch 4",
+        "Patch 5"
+    ],
     "default_device": "SensorServer._websocket._tcp.local.",
     "default_outport": "IAC Driver Bus 1"
 }
