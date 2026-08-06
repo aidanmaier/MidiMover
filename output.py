@@ -4,7 +4,7 @@ import queue
 import numpy as np
 import tkinter as tk
 from typing import Any
-from settings import Settings, SCALE_PATTERNS
+from settings import Settings, SCALE_PATTERNS, NOTE_NAMES
 from signal_processing import calculate_magnitude
 
 class Scale():
@@ -15,7 +15,6 @@ class Scale():
             root [0..11] (C..B),
             scale_type [valid scale types held in SCALE_PATTERNS]
         """
-        
         self.root = root
         self.type = scale_type
         self.pattern = SCALE_PATTERNS[scale_type] # degrees of the chromatic scale (1 octave)
@@ -33,6 +32,12 @@ class Scale():
                     full_scale.append(new_note)
         self.full = full_scale
 
+def midi_to_signed_pitch(midi_val: int) -> str:
+    """Converts a numerical MIDI value to its note pitch with numerical octave."""
+    pitch = NOTE_NAMES[midi_val % 12]
+    octave = midi_val // 12
+    return f'{pitch}{octave}'
+
 def midi_map(
         value: float, 
         input_range: tuple[float, float], 
@@ -41,7 +46,7 @@ def midi_map(
         exponential: bool = False
 ) -> int:
     """
-    Maps continuous sensor data to discreet midi values with settable input range to output range.
+    Maps continuous sensor data to discreet midi values from settable input range to output range.
     Parameters: 
     input_range [floor, ceiling]
     output_range [floor, ceiling]: in midi range [0..127]
@@ -188,6 +193,10 @@ class MidiPlayer:
         acceleration: list[float] = sample['sensors']['linear_acceleration']
         rotation: list[float] = sample['sensors']['rotation_vector']
 
+        # Guard for missing values
+        if len(rotation) < 3 or not acceleration:
+            return 
+
         # Processed input parameters
         pitch, roll, yaw = rotation[:3]
         speed = calculate_magnitude(acceleration)
@@ -228,15 +237,14 @@ class MidiPlayer:
                 )
                 mapped_vals[output_name] = output_value
 
-        # TODO
-        # 3. Process Note quantization and deduplication
+        # Note quantization and filter repeated notes
         if 'Note' in mapped_vals and mapped_vals['Note'] is not None:
             raw_pitch = mapped_vals['Note']
 
             # Quantize pitch to nearest note in scale
             quantized_pitch = snap_to_scale(raw_pitch, self.active_scale_object.full)
 
-            # Trigger only if pitch changed from previous note
+            # Trigger only if different from previous note
             if quantized_pitch == self.previous_note.get():
                 mapped_vals['Note'] = None
             else:
@@ -275,5 +283,7 @@ class MidiPlayer:
         scale_type = self.active_scale.get()
         root = self.active_root_note.get()
         self.active_scale_object = Scale(root, scale_type)
+        # Update global setting
+        self.settings.active_scale_full = self.active_scale_object.full
 
             

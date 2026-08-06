@@ -221,7 +221,7 @@ class Header(ttk.Frame):
             # Reset state on disconnect
             if running:
                 self.settings.running_status.set(False)
-                self.start_button.config(text='START')
+                self.start_button.config(text='PLAY')
                 return
 
     def _update_patch_menu_items(self, *args) -> None:

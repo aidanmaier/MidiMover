@@ -21,7 +21,7 @@ def connect_device(self) -> object:
             try:
                 self.listener.connect_to_service(device)
             except Exception as exc:
-                print(f'Failed to connect to {device}: {exc}')
+                print(f'Failed to connect to {device}: {exc}') # DEBUG
                 self.after(0, lambda: self._on_connect_failed(device, exc))
 
         self._connect_thread = threading.Thread(target=_run, daemon=True)
@@ -35,8 +35,6 @@ def disconnect_device(self) -> None:
     """Disconnects device and stops background connection thread."""
     print('Device disconnected:', self.listener, '\n') # DEBUG
     self.listener.disconnect()
-    if self._connect_thread and self._connect_thread.is_alive():
-        self._connect_thread.join(timeout=2) # timeout for WS server to respond
 
 class DeviceFrame(ConfigFrame):
     """GUI frame for configuring input device connections via Websockets."""

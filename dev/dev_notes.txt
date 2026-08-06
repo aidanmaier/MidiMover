@@ -7,12 +7,13 @@ Header_frame
 - BUG: disable patch selection while running x
 - TODO: Fix Patch Menu behaviour and add colours (blue=selected, green=loaded) X
 - TODO: Focus Start button on startup X
-- BUG: slow Stop button behaviour
-- BUG: phantom device connection when selecting from instrument menu
+- BUG: slow Stop button behaviour X
+- BUG: phantom device connection when selecting from instrument menu X
 
 Connection_frame:
 - TODO: remove Connect buttons - set active device to list selection X
 - TODO: wire up set defaults buttons X
+
 - TODO: add WS port column to differentiate between multiple SensorServer instances on different devices
 - TODO: add Settings section below connection lists, with midi channel and control values
 - BUG?: restrict MIDI ports list to outputs only
@@ -23,14 +24,17 @@ Connection_frame:
 Controls_frame:
 - BUG: range sliders clip out of frame right after hide info -> show info X
 - TODO: disable slider if no corresponding parameter selected X
+- TODO: show Note range as letters not [0, 127] x
+- TODO: focus parameter selector menus to first item, not last X
+
+- BUG: change slider bounds if input changed to Speed
+- BUG: update to letters when changing parameter to Note 
 - TODO: add Undo Changes button to reset patch to last save state
-- TODO: change slider bounds if input changed to Speed
-- TODO: show Note range as letters not [0, 127]
 - TODO: widget to visualise current IO parameter values in range
-- TODO: focus parameter selector menus to first item, not last
 
 Ouput:
-- TODO: Snap to nearest output note to avoid holes between notes
+- TODO: Snap to nearest output note to avoid holes between notes X
+
 
 ERROR:
 

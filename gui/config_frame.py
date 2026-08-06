@@ -111,7 +111,6 @@ class ConfigFrame(ttk.Frame):
             self.connected_device = None
             self.connected_device_name = None
             
-    
     def _on_device_select(self, event=None):
         """Captures selected item name and updates set default button state."""
         selected_items = self.devices_list.selection()
@@ -232,11 +231,15 @@ class ConfigFrame(ttk.Frame):
 
             # Focus list item, update selection and button states
             if focus_item:
-                self.devices_list.selection_set(focus_item)
-                self.devices_list.focus(focus_item)
-                self.devices_list.see(focus_item)
-                self.selected_device_name.set(str(focus_name))
-                
+                tags = self.devices_list.item(focus_item, 'tags')
+                if 'unavailable' in tags:
+                    self.devices_list.selection_remove(focus_item)
+                    self.selected_device_name.set('')
+                else:
+                    self.devices_list.selection_set(focus_item)
+                    self.devices_list.focus(focus_item)
+                    self.devices_list.see(focus_item)
+                    self.selected_device_name.set(str(focus_name))
 
     def _refresh_devices_list(self):
         """Clears devices list and rescans for available devices."""

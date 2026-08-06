@@ -7,44 +7,60 @@
             "legato": false,
             "parameters": {
                 "0": {
-                    "exponential": false,
-                    "invert": false,
                     "input": null,
-                    "input_range": [],
+                    "input_range": [
+                        -1.0,
+                        1.0
+                    ],
                     "output": null,
-                    "output_range": []
+                    "output_range": [
+                        0,
+                        127
+                    ],
+                    "mapping": false,
+                    "invert": false
                 },
                 "1": {
-                    "exponential": false,
-                    "invert": false,
                     "input": null,
-                    "input_range": [],
+                    "input_range": [
+                        -1.0,
+                        1.0
+                    ],
                     "output": null,
-                    "output_range": []
+                    "output_range": [
+                        0,
+                        127
+                    ],
+                    "mapping": false,
+                    "invert": false
                 },
                 "2": {
-                    "exponential": false,
-                    "invert": false,
                     "input": null,
-                    "input_range": [],
+                    "input_range": [
+                        -1.0,
+                        1.0
+                    ],
                     "output": null,
-                    "output_range": []
+                    "output_range": [
+                        0,
+                        127
+                    ],
+                    "mapping": false,
+                    "invert": false
                 },
                 "3": {
-                    "exponential": false,
-                    "invert": false,
                     "input": null,
-                    "input_range": [],
+                    "input_range": [
+                        -1.0,
+                        1.0
+                    ],
                     "output": null,
-                    "output_range": []
-                },
-                "4": {
-                    "exponential": false,
-                    "invert": false,
-                    "input": null,
-                    "input_range": [],
-                    "output": null,
-                    "output_range": []
+                    "output_range": [
+                        0,
+                        127
+                    ],
+                    "mapping": false,
+                    "invert": false
                 }
             }
         },
@@ -55,22 +71,20 @@
             "legato": false,
             "parameters": {
                 "0": {
-                    "exponential": false,
-                    "invert": false,
                     "input": "Speed",
                     "input_range": [
-                        0,
-                        100
+                        0.0,
+                        100.0
                     ],
                     "output": "Volume",
                     "output_range": [
                         10,
                         127
-                    ]
+                    ],
+                    "mapping": false,
+                    "invert": false
                 },
                 "1": {
-                    "exponential": false,
-                    "invert": true,
                     "input": "Tilt",
                     "input_range": [
                         -1.0,
@@ -80,25 +94,11 @@
                     "output_range": [
                         0,
                         127
-                    ]
+                    ],
+                    "mapping": false,
+                    "invert": true
                 },
                 "2": {
-                    "exponential": false,
-                    "invert": false,
-                    "input": null,
-                    "input_range": [
-                        -0.5,
-                        0.5
-                    ],
-                    "output": null,
-                    "output_range": [
-                        0,
-                        127
-                    ]
-                },
-                "3": {
-                    "exponential": false,
-                    "invert": false,
                     "input": null,
                     "input_range": [
                         -1.0,
@@ -108,21 +108,37 @@
                     "output_range": [
                         0,
                         127
-                    ]
+                    ],
+                    "mapping": false,
+                    "invert": false
+                },
+                "3": {
+                    "input": null,
+                    "input_range": [
+                        -1.0,
+                        1.0
+                    ],
+                    "output": null,
+                    "output_range": [
+                        0,
+                        127
+                    ],
+                    "mapping": false,
+                    "invert": false
                 }
             }
         },
-        "Air Harp": {
-            "description": "Tuned percussion mapped to pitch",
+        "Note Circle": {
+            "description": "A musical scale forming a circle around the player.",
             "root_note": 2,
             "scale": "Lydian",
             "legato": false,
             "parameters": {
                 "0": {
-                    "input": "Tilt",
+                    "input": "Turn",
                     "input_range": [
-                        -0.3,
-                        0.66
+                        -1.0,
+                        1.0
                     ],
                     "output": "Note",
                     "output_range": [
@@ -237,14 +253,6 @@
                     ],
                     "mapping": false,
                     "invert": false
-                },
-                "4": {
-                    "exponential": false,
-                    "invert": false,
-                    "input": null,
-                    "input_range": [],
-                    "output": null,
-                    "output_range": []
                 }
             }
         },
@@ -252,47 +260,63 @@
             "description": "A blank canvas.",
             "root_note": 2,
             "scale": "Major Pentatonic",
-            "legato": false,
+            "legato": true,
             "parameters": {
                 "0": {
-                    "exponential": false,
-                    "invert": false,
                     "input": null,
-                    "input_range": [],
+                    "input_range": [
+                        -1.0,
+                        1.0
+                    ],
                     "output": null,
-                    "output_range": []
+                    "output_range": [
+                        0,
+                        127
+                    ],
+                    "mapping": false,
+                    "invert": false
                 },
                 "1": {
-                    "exponential": false,
-                    "invert": false,
                     "input": null,
-                    "input_range": [],
+                    "input_range": [
+                        -1.0,
+                        1.0
+                    ],
                     "output": null,
-                    "output_range": []
+                    "output_range": [
+                        0,
+                        127
+                    ],
+                    "mapping": false,
+                    "invert": false
                 },
                 "2": {
-                    "exponential": false,
-                    "invert": false,
                     "input": null,
-                    "input_range": [],
+                    "input_range": [
+                        -1.0,
+                        1.0
+                    ],
                     "output": null,
-                    "output_range": []
+                    "output_range": [
+                        0,
+                        127
+                    ],
+                    "mapping": false,
+                    "invert": false
                 },
                 "3": {
-                    "exponential": false,
-                    "invert": false,
                     "input": null,
-                    "input_range": [],
+                    "input_range": [
+                        -1.0,
+                        1.0
+                    ],
                     "output": null,
-                    "output_range": []
-                },
-                "4": {
-                    "exponential": false,
-                    "invert": false,
-                    "input": null,
-                    "input_range": [],
-                    "output": null,
-                    "output_range": []
+                    "output_range": [
+                        0,
+                        127
+                    ],
+                    "mapping": false,
+                    "invert": false
                 }
             }
         },
@@ -303,44 +327,60 @@
             "legato": false,
             "parameters": {
                 "0": {
-                    "exponential": false,
-                    "invert": false,
                     "input": null,
-                    "input_range": [],
+                    "input_range": [
+                        -1.0,
+                        1.0
+                    ],
                     "output": null,
-                    "output_range": []
+                    "output_range": [
+                        0,
+                        127
+                    ],
+                    "mapping": false,
+                    "invert": false
                 },
                 "1": {
-                    "exponential": false,
-                    "invert": false,
                     "input": null,
-                    "input_range": [],
+                    "input_range": [
+                        -1.0,
+                        1.0
+                    ],
                     "output": null,
-                    "output_range": []
+                    "output_range": [
+                        0,
+                        127
+                    ],
+                    "mapping": false,
+                    "invert": false
                 },
                 "2": {
-                    "exponential": false,
-                    "invert": false,
                     "input": null,
-                    "input_range": [],
+                    "input_range": [
+                        -1.0,
+                        1.0
+                    ],
                     "output": null,
-                    "output_range": []
+                    "output_range": [
+                        0,
+                        127
+                    ],
+                    "mapping": false,
+                    "invert": false
                 },
                 "3": {
-                    "exponential": false,
-                    "invert": false,
                     "input": null,
-                    "input_range": [],
+                    "input_range": [
+                        -1.0,
+                        1.0
+                    ],
                     "output": null,
-                    "output_range": []
-                },
-                "4": {
-                    "exponential": false,
-                    "invert": false,
-                    "input": null,
-                    "input_range": [],
-                    "output": null,
-                    "output_range": []
+                    "output_range": [
+                        0,
+                        127
+                    ],
+                    "mapping": false,
+                    "invert": false
                 }
             }
         }

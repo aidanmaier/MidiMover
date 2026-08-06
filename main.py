@@ -113,7 +113,7 @@ class App(tk.Tk):
             background='#0078d7',
             foreground='white'
         )
-        # Keep text legible when clicked
+
         self.style.map(
             'Active.TButton',
             background=[('disabled', 'light grey'), ('pressed', '#005a9e'), ('active', '#0078d7')],
@@ -128,6 +128,17 @@ class App(tk.Tk):
         self.style.map(
             'Default.TButton',
             foreground=[('disabled', '#a0a0a0'), ('pressed', 'black'), ('active', 'black')]
+        )
+
+        # Styles for parameter selectors
+        style = ttk.Style()
+        style.configure('Filled.TCombobox', foreground='green')
+        style.configure('Empty.TCombobox', foreground='black', bordercolor='red')
+
+        style.map(
+            'Empty.TCombobox',
+            bordercolor=[('readonly', 'red'), ('focus', 'red'), ('!focus', 'red')],
+            fieldbackground=[('readonly', 'white')],
         )
 
     def _toggle_tabs(self, panel_name:str):
@@ -208,12 +219,21 @@ class App(tk.Tk):
                 stop_event=self._stop_event
             )
             self._stream_future = asyncio.run_coroutine_threadsafe(coro, self._run_loop)
+            self._stream_future.add_done_callback(self._on_stream_done)
 
         elif time.time() - start_time > timeout:
             self.running_status.set(False)
             print("Timeout Error: Websocket listener failed to open in time.")
         else:
             self.after(50, lambda: self._wait_for_listener_and_start(start_time, timeout))
+
+    def _on_stream_done(self, future):
+        if future.cancelled():
+            return
+        exc = future.exception()
+        if exc is not None:
+            print(f"Streaming task failed: {exc!r}")
+            self.after(0, lambda: self.running_status.set(False))
 
 
 if __name__ == '__main__':

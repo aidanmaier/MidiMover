@@ -54,14 +54,6 @@ FACTORY_PATCHES = {
                     "input_range": [],
                     "output": None,
                     "output_range": []
-                },
-                "4": {
-                    "exponential" : False,
-                    "invert" : False,
-                    "input": None,
-                    "input_range": [],
-                    "output": None,
-                    "output_range": []
                 }
             }
         }
@@ -92,17 +84,15 @@ SCALE_PATTERNS = {
 
 # Default MIDI CC controls
 CONTROL_CODES = {
-    'Mod': 1, # mod wheel
     'Volume': 7,
     'Filt Res': 71, # filter resonance
-    'Release': 72,
-    'Attack': 73,
     'Filt Cut': 74, # filter cutoff
-    'Portamento': 84,
-    'Reverb': 91,
-    'Tremolo': 92,
-    'Chorus': 93,
-    'Phaser': 95,
+    'Attack': 73,
+    'Release': 72,
+    'User 1': 85, # Custom user parameter 1
+    'User 2': 86, # Custom user parameter 2
+    'User 3': 89, # Custom user parameter 3
+    'User 4': 90, # Custom user parameter 4
 }
 
 
@@ -127,26 +117,13 @@ class Settings:
 
         # Immutable app settings
         self.input_parameter_types = [
+            '', # blank parameter = no output
             'Speed', 
             'Tilt', 
             'Turn', 
             'Twist', 
-            '' # blank parameter = no output
             ]
-        self.output_parameter_types = [
-            'Note', 
-            'Volume', 
-            'Mod', # Mod wheel
-            'Filt Res', # Filter resonance
-            'Filt Cut', # Filter cutoff
-            'Attack', # Volume envelope attack
-            'Release', # Volume envelope release
-            'Custom 1', # Custom parameter 1
-            'Custom 2', # Custom parameter 2
-            'Custom 3', # Custom parameter 3
-            'Custom 4', # Custom parameter 4
-            '' # blank parameter = no output
-            ]
+        self.output_parameter_types = ['', 'Note'] + [p for p in CONTROL_CODES.keys()]
 
         self.ws_address: str = FACTORY_SETTINGS['ws_address']
         self.sensors: list[str] = FACTORY_SETTINGS['sensors']
@@ -162,6 +139,7 @@ class Settings:
         self.active_scale = tk.StringVar(value='Major Pentatonic')
         self.active_root_note = tk.IntVar(value=2) # root note number
         self.active_root_name = tk.StringVar(value=self.note_names[self.active_root_note.get()]) # root note letter
+        self.active_scale_full = []
 
         self.saved_patches_list = list(p['patches'].keys())
 

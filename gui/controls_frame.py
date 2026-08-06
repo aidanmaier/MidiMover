@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Any
 from settings import Settings
+from output import midi_to_signed_pitch, snap_to_scale
 from gui.widgets import RangeSlider
 
 class ControlsFrame(ttk.Frame):
@@ -24,6 +25,7 @@ class ControlsFrame(ttk.Frame):
         self.active_scale: tk.StringVar = self.settings.active_scale
         self.active_root_note: tk.IntVar = self.settings.active_root_note
         self.active_root_name: tk.StringVar = self.settings.active_root_name
+        
 
         # Local constants
         self.name = 'Controls'
@@ -61,8 +63,8 @@ class ControlsFrame(ttk.Frame):
 
         # Handle scale and root changes
         self.active_root_name.trace_add('write', self._update_active_root_note)
-        self.active_scale.trace_add('write', lambda *args: self._on_parameter_change())
-        self.active_root_name.trace_add('write', lambda *args: self._on_parameter_change())
+        self.active_scale.trace_add('write', self._on_parameter_change)
+        self.active_root_name.trace_add('write', self._on_parameter_change)
     
     def _create_widgets(self):
         # Patch info
@@ -75,7 +77,7 @@ class ControlsFrame(ttk.Frame):
 
         # Save/Reset/Set Default buttons
         self.patch_button_frame = ttk.Frame(self)
-        self.patch_button_frame.grid(column=2, row=0, sticky='ew')
+        self.patch_button_frame.grid(column=2, columnspan=2, row=0, sticky='ew', padx=10)
 
         self.save_patch_button = ttk.Button(
             self.patch_button_frame, 
@@ -133,16 +135,24 @@ class ControlsFrame(ttk.Frame):
         for i in range(3):
             self.parameters_frame.columnconfigure(i)
 
+        # Footer
+        self.footer_frame = ttk.Frame(self)
+        self.footer_frame.grid(column=0, columnspan=3, row=6,  sticky='ew')
+
+        # Re-center button
+        self.recenter_button = ttk.Button(self.footer_frame, text='Re-Center', width=20)
+        self.recenter_button.grid(column=0, row=0, **self.options)
+
         # Musical scale settings
-        self.scale_frame = ttk.Frame(self)
-        self.scale_frame.grid(column=0, row=6, columnspan=2, sticky='ew')
+        self.scale_frame = ttk.Frame(self.footer_frame)
+        self.scale_frame.grid(column=1, row=0,  sticky='ew', padx=3)
         self.scale_frame.columnconfigure(0, weight=1)
         self.scale_frame.columnconfigure(1, weight=2)
         self.scale_frame.columnconfigure(2, weight=1)
         self.scale_frame.columnconfigure(3, weight=2)
 
         self.root_label = ttk.Label(self.scale_frame, text='Root Note:')
-        self.root_label.grid(column=0, row=0, sticky='w', padx=10, pady=10)
+        self.root_label.grid(column=0, row=0, **self.options)
         self.root_var_selector = ttk.Combobox(
             self.scale_frame,
             textvariable=self.active_root_name,
@@ -150,10 +160,10 @@ class ControlsFrame(ttk.Frame):
             width=4,
             state='readonly',
         )
-        self.root_var_selector.grid(column=1, row=0, sticky='w', padx=10, pady=10)
+        self.root_var_selector.grid(column=1, row=0, **self.options)
 
         self.scale_label = ttk.Label(self.scale_frame, text='Scale:')
-        self.scale_label.grid(column=2, row=0, sticky='w', padx=10, pady=10)
+        self.scale_label.grid(column=2, row=0, **self.options)
 
         self.scale_var_selector = ttk.Combobox(
             self.scale_frame,
@@ -162,7 +172,18 @@ class ControlsFrame(ttk.Frame):
             width=14,
             state='readonly',
         )
-        self.scale_var_selector.grid(column=3, row=0, sticky='w', padx=10, pady=10)
+        self.scale_var_selector.grid(column=3, row=0, **self.options)
+
+        # Legato button
+        self.legato_var = tk.BooleanVar(value=False, )
+        self.legato_button = ttk.Button(
+            self.footer_frame, 
+            text='Legato', 
+            style='Active.TButton' if self.legato_var.get() else 'Default.TButton',
+            width=11,
+            command=self._on_legato_button
+        )
+        self.legato_button.grid(column=2, row=0, **self.options)
 
     def _build_parameter_controls(self, index: int) -> None:
         """Builds input/output parameter mapping controls."""
@@ -173,12 +194,12 @@ class ControlsFrame(ttk.Frame):
             str_index, 
             # default parameter values:
             {
-                'mapping': False,
-                'invert': False,
                 'input': None, 
                 'input_range': [-1, 1], 
                 'output': None, 
                 'output_range': [0, 127],
+                'mapping': False,
+                'invert': False,
             } 
         )
 
@@ -260,6 +281,7 @@ class ControlsFrame(ttk.Frame):
             connector_param_frame, 
             text='Exp.' if mapping_bool else 'Linear', 
             width=7,
+            style='Active.TButton' if mapping_bool else 'Default.TButton',
             command=lambda idx=index: self._on_connector_mapping_button(idx,connector_mapping_var )
             )
         connector_mapping_button.grid(column=1, row=0, sticky='w', padx=5, pady=5)
@@ -295,9 +317,20 @@ class ControlsFrame(ttk.Frame):
 
         output_range_frame = ttk.Frame(output_param_frame)
         output_range_frame.grid(column=0, row=1, padx=(0, 0))
+
+        # Convert numbers to letter names for Note parameters
+        if output_param == 'Note':
+            quantized_low = snap_to_scale(output_range[0], self.settings.active_scale_full)
+            quantized_high = snap_to_scale(output_range[1], self.settings.active_scale_full)
+            signed_low = midi_to_signed_pitch(quantized_low)
+            signed_high = midi_to_signed_pitch(quantized_high)
+            output_range_text = f'{signed_low} : {signed_high}'
+        else:
+            output_range_text = f'{output_range[0]} : {output_range[1]}'
+
         output_range_label = ttk.Label(
             output_range_frame, 
-            text=f'{output_range[0]} : {output_range[1]}'
+            text=output_range_text
             )
         output_range_label.grid(column=0, row=0)
 
@@ -334,6 +367,7 @@ class ControlsFrame(ttk.Frame):
         # Set initial slider state based on loaded values and update local patch data
         self._update_slider_states(index)
         self._sync_row_data(index)
+        self._on_parameter_change()
 
     def _refresh_available_types(self) -> None:
         """Handles available parameter types across all rows so no type can be used more than once."""
@@ -439,9 +473,20 @@ class ControlsFrame(ttk.Frame):
             actual_low = int(low)
             actual_high = int(high)
 
-            widgets['output_label'].config(text=f'{actual_low} : {actual_high}')
-            self.loaded_patch_parameters_data[str_index][range_key] = [actual_low, actual_high]   
-              
+            # Convert numbers to letter names for Note parameters
+            output_param = self.parameter_selector_widgets[index][1][0].get()
+            if output_param == 'Note':
+                quantized_low = snap_to_scale(actual_low, self.settings.active_scale_full)
+                quantized_high = snap_to_scale(actual_high, self.settings.active_scale_full)
+                signed_low = midi_to_signed_pitch(quantized_low)
+                signed_high = midi_to_signed_pitch(quantized_high)
+                output_range_text = f'{signed_low} : {signed_high}'
+            else:
+                output_range_text = f'{actual_low} : {actual_high}'
+
+            widgets['output_label'].config(text=output_range_text)
+            self.loaded_patch_parameters_data[str_index][range_key] = [actual_low, actual_high]
+
         self._on_parameter_change()
 
     def _update_parameter_list(self, *args) -> None:
@@ -450,15 +495,17 @@ class ControlsFrame(ttk.Frame):
         cleaned_name = loaded_patch.removesuffix(' (default)')
         self.cleaned_loaded_patch_name.set(cleaned_name)    
 
-        # Sync scale and root note from saved patch data
+        # Sync scale, root note and legato from saved patch data
         patch_info = self.settings.saved_patches_data.get('patches', {}).get(cleaned_name, {})
         if patch_info:
             if 'scale' in patch_info:
                 self.active_scale.set(patch_info['scale'])
-            
             if 'root_note' in patch_info:
                 root_note = patch_info['root_note']
                 self.active_root_name.set(self.note_names[root_note])
+            if 'legato' in patch_info:
+                self.legato_var.set(patch_info['legato'])
+                self._update_legato_button()
 
         # Destroy all child widgets in parameters_frame 
         for child in self.parameters_frame.winfo_children():
@@ -501,8 +548,28 @@ class ControlsFrame(ttk.Frame):
         new_root_note = self.note_names.index(self.active_root_name.get())
         self.active_root_note.set(new_root_note)
 
-    def _on_parameter_change(self) -> None:
-        """Flag parameter settings changes to activate Save Patch button."""
+    def _on_parameter_change(self, *args) -> None:
+        """Flag parameter settings changes and update selector styles."""
+        # Update style for all selector boxes
+        for i in range(len(self.parameter_selector_widgets)):
+            (in_var, in_sel), (out_var, out_sel) = self.parameter_selector_widgets[i]
+            has_input = bool(in_var.get())
+            has_output = bool(out_var.get())
+
+            if has_input and has_output:
+                in_sel.configure(style='Filled.TCombobox')
+                out_sel.configure(style='Filled.TCombobox')
+            elif has_input and not has_output:
+                in_sel.configure(style='TCombobox')
+                out_sel.configure(style='Empty.TCombobox')
+            elif has_output and not has_input:
+                in_sel.configure(style='Empty.TCombobox')
+                out_sel.configure(style='TCombobox')
+            else:
+                in_sel.configure(style='TCombobox')
+                out_sel.configure(style='TCombobox') 
+
+        # Flag changes
         self.patch_altered.set(True)
 
     def _on_save_patch_button(self) -> None:
@@ -514,6 +581,7 @@ class ControlsFrame(ttk.Frame):
             self.settings.saved_patches_data['patches'][patch_name]['parameters'] = self.loaded_patch_parameters_data
             self.settings.saved_patches_data['patches'][patch_name]['root_note'] = self.active_root_note.get()
             self.settings.saved_patches_data['patches'][patch_name]['scale'] = self.active_scale.get()
+            self.settings.saved_patches_data['patches'][patch_name]['legato'] = self.legato_var.get()
             
             # Save patches file to json
             with open(self.settings.patches_filepath, 'w') as f:
@@ -579,8 +647,10 @@ class ControlsFrame(ttk.Frame):
         # Update visual button label
         if new_state:
             mapping_button.config(text='Exp.')
+            mapping_button.config(style='Active.TButton')
         else:
             mapping_button.config(text='Linear')
+            mapping_button.config(style='Default.TButton')
 
         # Flag patch changes and update parameter data
         self._sync_row_data(index)
@@ -605,6 +675,26 @@ class ControlsFrame(ttk.Frame):
         # Flag patch changes and update parameter data
         self._sync_row_data(index)
         self._on_parameter_change()
+
+    def _on_recenter_button(self) -> None:
+        """Flips recenter button state."""
+        pass
+
+    def _update_legato_button(self) -> None:
+        """Refreshes legato button style."""
+        new_state = self.legato_var.get()
+        if new_state:
+            self.legato_button.config(style='Active.TButton')
+        else:
+            self.legato_button.config(style='Default.TButton')
+
+    def _on_legato_button(self) -> None:
+        """Flips legato button state and updates style."""
+        # Flip current toggle state
+        new_state = not self.legato_var.get()
+        self.legato_var.set(new_state)
+        self.patch_altered.set(True)
+        self._update_legato_button()
 
 
         
