@@ -14,7 +14,7 @@
         "Note Circle",
         "Patch 3",
         "Patch 4",
-        "Patch 5"
+        "Little Lamb"
     ],
     "default_device": "SensorServer._websocket._tcp.local.",
     "default_outport": "IAC Driver Bus 1"

@@ -1,3 +1,4 @@
+import os
 import asyncio
 import threading
 import time
@@ -13,17 +14,17 @@ from gui.header_frame import Header
 from input import WebsocketServiceListener, DataStreamer
 from output import MidiOut, MidiPlayer
 
-# Configure Mido back-end to avoid python-rtmidi PyEval_RestoreThread GIL assertion failure in macOS
+# Configure Mido rtmidi backend to use CoreMIDI engine on macOS
+# to avoid python-rtmidi PyEval_RestoreThread GIL assertion failure
 def configure_mido_backend():
     if sys.platform == "darwin":  # macOS
         try:
-            # no C-extension GIL crash during background polling in pygame 
-            mido.set_backend('mido.backends.pygame')
-            print("mido: Configured 'pygame' backend for macOS.")
+            os.environ["RTMIDI_API"] = "MACOSX_CORE"  # force CoreMIDI driver
+            mido.set_backend('mido.backends.rtmidi')  
+            print("mido: Configured 'rtmidi' with native CoreMIDI backend for macOS.")
         except Exception as e:
-            print(f"mido: Failed to load pygame backend ({e}). Falling back to default.")
+            print(f"mido: Failed to load rtmidi backend ({e}). Falling back to default.")
     else:  # Windows / Linux
-        # rtmidi crash only present in macOS
         try:
             mido.set_backend('mido.backends.rtmidi')
             print("mido: Configured 'rtmidi' backend.")

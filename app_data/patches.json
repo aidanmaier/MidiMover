@@ -135,15 +135,15 @@
             "legato": false,
             "parameters": {
                 "0": {
-                    "input": "Turn",
+                    "input": "Tilt",
                     "input_range": [
-                        -1.0,
-                        1.0
+                        -0.4,
+                        0.3
                     ],
                     "output": "Note",
                     "output_range": [
-                        45,
-                        99
+                        69,
+                        76
                     ],
                     "mapping": false,
                     "invert": false
@@ -154,13 +154,13 @@
                         -1.0,
                         1.0
                     ],
-                    "output": null,
+                    "output": "Volume",
                     "output_range": [
                         0,
                         127
                     ],
-                    "mapping": false,
-                    "invert": false
+                    "mapping": true,
+                    "invert": true
                 },
                 "2": {
                     "input": null,
@@ -206,8 +206,8 @@
                     ],
                     "output": "Note",
                     "output_range": [
-                        0,
-                        127
+                        53,
+                        88
                     ],
                     "mapping": false,
                     "invert": false
@@ -320,22 +320,22 @@
                 }
             }
         },
-        "Patch 5": {
-            "description": "A blank canvas.",
+        "Little Lamb": {
+            "description": "For simple melodies",
             "root_note": 2,
-            "scale": "Major Pentatonic",
+            "scale": "Major",
             "legato": false,
             "parameters": {
                 "0": {
-                    "input": null,
+                    "input": "Tilt",
                     "input_range": [
-                        -1.0,
-                        1.0
+                        -0.42,
+                        0.41
                     ],
-                    "output": null,
+                    "output": "Note",
                     "output_range": [
-                        0,
-                        127
+                        69,
+                        76
                     ],
                     "mapping": false,
                     "invert": false

@@ -35,6 +35,10 @@ Controls_frame:
 Ouput:
 - TODO: Snap to nearest output note to avoid holes between notes X
 
+- BUG: on stop, midi device left hanging so all notes sustain when restarted
+- TODO: send parameter reset message when on parameter change so nothing left stuck on 0 e.g. vol or filt_cut 
+- TODO: change parameter exclusivity so a single motion param can map to many midi params but not vice versa
+- BUG: 'Speed' not mapping to output range
 
 ERROR:
 
