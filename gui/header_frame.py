@@ -19,6 +19,7 @@ class Header(ttk.Frame):
         self.loaded_patch_description: tk.StringVar = self.settings.loaded_patch_description
         self.loaded_patch_parameters_data: dict = self.settings.loaded_patch_parameters_data
         self.running_status: tk.BooleanVar = self.settings.running_status
+        self.active_midi_channel: tk.IntVar = self.settings.active_midi_channel
         self.selected_input: tk.StringVar = self.settings.selected_input
         self.selected_output: tk.StringVar = self.settings.selected_output
 
@@ -271,8 +272,9 @@ class Header(ttk.Frame):
         if clean_patch_name in patches_data:
             selected_patch_data = patches_data[clean_patch_name]
 
-            # Update description StringVars
+            # Update patch variables
             self.loaded_patch_description.set(selected_patch_data.get('description', ''))
+            self.active_midi_channel.set(selected_patch_data['channel'])
 
             # Update parameters dictionary in settings and local pointer
             parameters = selected_patch_data.get('parameters', {})

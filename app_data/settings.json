@@ -13,7 +13,7 @@
         "Sound Drawing",
         "Note Circle",
         "Patch 3",
-        "Patch 4",
+        "Theremin",
         "Little Lamb"
     ],
     "default_device": "SensorServer._websocket._tcp.local.",

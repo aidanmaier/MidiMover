@@ -25,7 +25,9 @@ class ControlsFrame(ttk.Frame):
         self.active_scale: tk.StringVar = self.settings.active_scale
         self.active_root_note: tk.IntVar = self.settings.active_root_note
         self.active_root_name: tk.StringVar = self.settings.active_root_name
-        
+
+        self.running_status: tk.BooleanVar = self.settings.running_status
+        self.active_midi_channel: tk.IntVar = self.settings.active_midi_channel
 
         # Local constants
         self.name = 'Controls'
@@ -34,6 +36,7 @@ class ControlsFrame(ttk.Frame):
         # Local variables
         self.patch_altered = tk.BooleanVar(value=False)
         self.cleaned_loaded_patch_name = tk.StringVar(value='') # default tag stripped
+        self.display_midi_channel = tk.IntVar(value=self.active_midi_channel.get() + 1) # 1-indexed for UI
 
         # Track parameter types so only one of each is ever used
         self.available_input_types = [x for x in self.input_parameter_types]
@@ -51,6 +54,14 @@ class ControlsFrame(ttk.Frame):
             self.columnconfigure(i, weight=1)
 
         self._create_widgets()
+
+        # Handle running status change
+        self.running_status.trace_add('write', self._update_channel_selector_state)
+
+        # Handle MIDI channel changes
+        self.active_midi_channel.trace_add('write', self._on_parameter_change)
+        self.active_midi_channel.trace_add('write', self._on_active_channel_changed)
+        self.display_midi_channel.trace_add('write', self._on_display_channel_changed)
         
         # Handle patch button states
         self.patch_altered.trace_add('write', self._update_patch_button_states)
@@ -109,10 +120,28 @@ class ControlsFrame(ttk.Frame):
         # Patch description
         self.patch_description_frame = ttk.Frame(self)
         self.patch_description_frame.grid(column=0, row=1, columnspan=3, sticky='ew', padx=10, pady=5)
+        self.patch_description_frame.columnconfigure(2, weight=1)
+
         self.patch_description_label = ttk.Label(self.patch_description_frame, text='Description:', width=10)
-        self.patch_description_label.pack(side='left')
+        self.patch_description_label.grid(column=0, row=0)
         self.patch_description = ttk.Label(self.patch_description_frame, textvariable=self.loaded_patch_description)
-        self.patch_description.pack(side='left')
+        self.patch_description.grid(column=1, row=0)
+
+        # MIDI channel selector
+        self.channel_frame = ttk.Frame(self.patch_description_frame)
+        self.channel_frame.grid(column=3, row=0, sticky='e')
+
+        self.channel_label = ttk.Label(self.channel_frame, text='MIDI Channel:')
+        self.channel_label.grid(column=0, row=0, padx=5)
+
+        self.channel_selector = ttk.Spinbox(
+            self.channel_frame,
+            from_=0,
+            to=15,
+            textvariable=self.display_midi_channel,
+            width=3,
+        )
+        self.channel_selector.grid(column=1, row=0)
 
         # Separate description from controls
         self.separator_upper = ttk.Separator(self, orient=tk.HORIZONTAL)
@@ -184,7 +213,8 @@ class ControlsFrame(ttk.Frame):
             text='Legato', 
             style='Active.TButton' if self.legato_var.get() else 'Default.TButton',
             width=11,
-            command=self._on_legato_button
+            command=self._on_legato_button,
+            state='disabled' # TODO: implement legato
         )
         self.legato_button.grid(column=2, row=0, **self.options)
 
@@ -588,10 +618,13 @@ class ControlsFrame(ttk.Frame):
         
         # Update active patch data inside Settings.saved_patches_data
         if patch_name in self.settings.saved_patches_data.get('patches', {}):
-            self.settings.saved_patches_data['patches'][patch_name]['parameters'] = self.loaded_patch_parameters_data
-            self.settings.saved_patches_data['patches'][patch_name]['root_note'] = self.active_root_note.get()
-            self.settings.saved_patches_data['patches'][patch_name]['scale'] = self.active_scale.get()
-            self.settings.saved_patches_data['patches'][patch_name]['legato'] = self.legato_var.get()
+            patch_data = self.settings.saved_patches_data['patches'][patch_name]
+
+            patch_data['parameters'] = self.loaded_patch_parameters_data
+            patch_data['channel'] = self.active_midi_channel.get()
+            patch_data['root_note'] = self.active_root_note.get()
+            patch_data['scale'] = self.active_scale.get()
+            patch_data['legato'] = self.legato_var.get()
             
             # Save patches file to json
             with open(self.settings.patches_filepath, 'w') as f:
@@ -610,6 +643,14 @@ class ControlsFrame(ttk.Frame):
         """Saves loaded patch as default in settings.json."""
         loaded_patch = self.loaded_patch_name.get().removesuffix(' (default)')
         self.default_patch.set(loaded_patch)
+
+    def _update_channel_selector_state(self, *args) -> None:
+        """Disables channel selector when running."""
+        running = self.running_status.get()
+        if running:
+            self.channel_selector.config(state='disabled')
+        else:
+            self.channel_selector.config(state='normal')
 
     def _update_slider_states(self, index: int) -> None:
         """Disables and resets sliders if their corresponding combobox selector is empty."""
@@ -685,6 +726,30 @@ class ControlsFrame(ttk.Frame):
         # Flag patch changes and update parameter data
         self._sync_row_data(index)
         self._on_parameter_change()
+
+    def _on_active_channel_changed(self, *args) -> None:
+        """Syncs the UI MIDI channel (1-indexed) when active MIDI channel (0-indexed) changes."""
+        actual_val = self.active_midi_channel.get()
+        expected_display = actual_val + 1
+        
+        # Prevent trace loop
+        if self.display_midi_channel.get() != expected_display:
+            self.display_midi_channel.set(expected_display)
+
+    def _on_display_channel_changed(self, *args) -> None:
+        """Syncs the active MIDI channel on channel selector change."""
+        try:
+            display_val = self.display_midi_channel.get()
+            # Clamp to valid [1, 16] range and convert to [0, 15]
+            actual_val = max(0, min(127, display_val - 1))
+
+            # Prevent trace loop
+            if self.active_midi_channel.get() != actual_val:
+                self.active_midi_channel.set(actual_val)
+
+        except tk.TclError:
+            # User typing
+            pass
 
     def _on_recenter_button(self) -> None:
         """Flips recenter button state."""

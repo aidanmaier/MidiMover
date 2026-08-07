@@ -19,6 +19,7 @@ FACTORY_PATCHES = {
     "patches" : {
         "< new instrument >" : {
             "description": "A blank canvas.",
+            "channel": 0,
             "root_note" : 2,
             "scale": "Major",
             "legato": False,
@@ -132,6 +133,7 @@ class Settings:
 
         # User settings, load factory setting if missing
         self.default_sample_rate: int = s.get('default_sample_rate', FACTORY_SETTINGS['default_sample_rate'])
+        self.default_midi_channel: int = 0 # TODO: wire into settings.json
         self.default_patch = tk.StringVar(value=s.get('default_patch', FACTORY_SETTINGS['default_patch']))
         self.default_device = tk.StringVar(value=s.get('default_device', FACTORY_SETTINGS['default_device']))
         self.default_outport = tk.StringVar(value=s.get('default_outport', FACTORY_SETTINGS['default_outport']))
@@ -161,6 +163,8 @@ class Settings:
         self.loaded_patch_name = tk.StringVar(value='')
         self.loaded_patch_description = tk.StringVar(value='')
         self.loaded_patch_parameters_data = {}
+
+        self.active_midi_channel = tk.IntVar(value=self.default_midi_channel)
 
         # Write default changes to settings.json
         self.default_device.trace_add('write', self._write_default_device)

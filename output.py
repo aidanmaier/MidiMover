@@ -85,13 +85,17 @@ def snap_to_scale(pitch: int, valid_notes: list[int]) -> int:
 class MidiOut():
     """Wrapper for Mido output functionality."""
     
-    def __init__(self, settings: Settings, channel: int = 0) -> None:
-        self.channel = channel
+    def __init__(self, settings: Settings) -> None:
+        self.channel = settings.active_midi_channel.get()
         self._outport: mido.ports.BaseOutput | None = None
 
         # Pointers to global settings
         self.settings = settings
         self.control_codes = settings.control_codes
+        self.active_midi_channel = settings.active_midi_channel
+
+        # Track MIDI channel changes
+        self.active_midi_channel.trace_add('write', self._update_channel)
 
     def open_outport(self, port_name: str) -> None:
         """Opens new MIDI ouput port."""
@@ -102,6 +106,23 @@ class MidiOut():
         if self._outport is not None:
             self._outport.close()
             self._outport = None
+
+    def _update_channel(self, *args) -> None:
+            """Callback triggered when settings.active_midi_channel is modified."""
+            try:
+                new_channel = self.settings.active_midi_channel.get()
+
+                # Guard for invalid entry
+                if new_channel not in range(16):
+                    raise ValueError('MIDI channel must be in the range [0, 15]')
+
+                self.channel = new_channel
+
+                print(self.channel) # DEBUG
+
+            except tk.TclError:
+                # Handles temporary invalid/empty inputs in GUI entry widgets
+                pass
 
     def is_open(self) -> bool:
         """Returns True if outport exists and is open."""
