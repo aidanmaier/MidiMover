@@ -20,7 +20,7 @@ class ControlsFrame(ttk.Frame):
 
         self.loaded_patch_name: tk.StringVar = self.settings.loaded_patch_name
         self.loaded_patch_description: tk.StringVar = self.settings.loaded_patch_description
-        self.loaded_patch_parameters_data: dict = self.settings.loaded_patch_parameters_data
+        # self.settings.loaded_patch_parameters_data: dict = self.settings.settings.loaded_patch_parameters_data
 
         self.active_scale: tk.StringVar = self.settings.active_scale
         self.active_root_note: tk.IntVar = self.settings.active_root_note
@@ -223,7 +223,7 @@ class ControlsFrame(ttk.Frame):
 
         # Ensure the index key exists in patch data before reading
         str_index = str(index)
-        param_data = self.loaded_patch_parameters_data.get(
+        param_data = self.settings.loaded_patch_parameters_data.get(
             str_index, 
             # default parameter values:
             {
@@ -270,13 +270,23 @@ class ControlsFrame(ttk.Frame):
         else:
             low_bound, high_bound = -1.0, 1.0
 
+        # Calculate current initial values as percentage steps [0, 100]
+        span = high_bound - low_bound
+        start_low = int(round(((input_range[0] - low_bound) / span) * 100))
+        start_high = int(round(((input_range[1] - low_bound) / span) * 100))
+
+        # Clamp initial steps to [0, 100]
+        start_low = max(0, min(100, start_low))
+        start_high = max(0, min(100, start_high))
+
         input_range_frame = ttk.Frame(input_param_frame)
         input_range_frame.grid(column=0, row=1, padx=(0, 0))
+        
+        # Display integer percentage steps [0, 100]
         input_range_label = ttk.Label(
             input_range_frame, 
-            text=f'{low_bound:3.2f} : {high_bound:3.2f}' if not input_param 
-                else f'{input_range[0]:3.2f} : {input_range[1]:3.2f}'
-            )
+            text=f'{start_low} : {start_high}'
+        )
         input_range_label.grid(column=2, row=0)
 
         # Calculate current initial values as percentage steps [0, 100]
@@ -433,8 +443,8 @@ class ControlsFrame(ttk.Frame):
         out_slider = widgets['output_slider']
 
         # Check dictionary key entry exists
-        if str_index not in self.loaded_patch_parameters_data:
-            self.loaded_patch_parameters_data[str_index] = {}
+        if str_index not in self.settings.loaded_patch_parameters_data:
+            self.settings.loaded_patch_parameters_data[str_index] = {}
 
         # Parameter selector variables
         input_param = in_var.get() or None
@@ -455,7 +465,7 @@ class ControlsFrame(ttk.Frame):
         out_high = int(out_slider.high_var.get())
 
         # Update patch parameter dictionary
-        self.loaded_patch_parameters_data[str_index] = {
+        self.settings.loaded_patch_parameters_data[str_index] = {
             'input': input_param,
             'input_range': [actual_in_low, actual_in_high],
             'output': output_param,
@@ -493,19 +503,20 @@ class ControlsFrame(ttk.Frame):
     ) -> None:
         """Called when a range slider changes."""
         str_index = str(index)
-        if str_index not in self.loaded_patch_parameters_data:
-            self.loaded_patch_parameters_data[str_index] = {}
+        if str_index not in self.settings.loaded_patch_parameters_data:
+            self.settings.loaded_patch_parameters_data[str_index] = {}
 
         # Update the GUI Label corresponding to the modified slider
         widgets = self.parameter_slider_widgets[index]
 
         if range_key == 'input_range':
-            # Map step integers [0, 100] back to target floats
+            # Map step integers [0, 100] back to target floats for underlying patch data
             actual_low = low_bound + (low / 100.0) * (high_bound - low_bound)
             actual_high = low_bound + (high / 100.0) * (high_bound - low_bound)
 
-            widgets['input_label'].config(text=f'{actual_low:3.2f} : {actual_high:3.2f}')
-            self.loaded_patch_parameters_data[str_index][range_key] = [round(actual_low, 2), round(actual_high, 2)]
+            # Display slider percentage steps directly
+            widgets['input_label'].config(text=f'{int(low)} : {int(high)}')
+            self.settings.loaded_patch_parameters_data[str_index][range_key] = [round(actual_low, 2), round(actual_high, 2)]
 
         elif range_key == 'output_range':
             # Output range is already MIDI [0, 127]
@@ -525,7 +536,7 @@ class ControlsFrame(ttk.Frame):
                 output_range_text = f'{actual_low} : {actual_high}'
 
             widgets['output_label'].config(text=output_range_text)
-            self.loaded_patch_parameters_data[str_index][range_key] = [actual_low, actual_high]
+            self.settings.loaded_patch_parameters_data[str_index][range_key] = [actual_low, actual_high]
 
         self._on_parameter_change()
 
@@ -554,7 +565,7 @@ class ControlsFrame(ttk.Frame):
         self.parameter_selector_widgets.clear()
         self.parameter_slider_widgets.clear()
 
-        self.loaded_patch_parameters_data = self.settings.loaded_patch_parameters_data
+        # self.settings.loaded_patch_parameters_data = self.settings.loaded_patch_parameters_data
 
         # Parameter controls
         for i in range(4):
@@ -620,7 +631,7 @@ class ControlsFrame(ttk.Frame):
         if patch_name in self.settings.saved_patches_data.get('patches', {}):
             patch_data = self.settings.saved_patches_data['patches'][patch_name]
 
-            patch_data['parameters'] = self.loaded_patch_parameters_data
+            patch_data['parameters'] = self.settings.loaded_patch_parameters_data
             patch_data['channel'] = self.active_midi_channel.get()
             patch_data['root_note'] = self.active_root_note.get()
             patch_data['scale'] = self.active_scale.get()
@@ -672,8 +683,7 @@ class ControlsFrame(ttk.Frame):
         if not in_var.get():
             in_slider.configure(state='disabled')
             in_slider.set_range(in_slider.from_, in_slider.to)
-            low_bound, high_bound = (-1.0, 1.0)
-            in_label.config(text=f'{low_bound:3.2f} : {high_bound:3.2f}')
+            in_label.config(text=f'{int(in_slider.from_)} : {int(in_slider.to)}')
         else:
             in_slider.configure(state='normal')
 

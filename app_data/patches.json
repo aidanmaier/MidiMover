@@ -152,15 +152,15 @@
                     "invert": false
                 },
                 "1": {
-                    "input": "Tilt",
+                    "input": "Speed",
                     "input_range": [
-                        -0.46,
-                        0.34
+                        0.0,
+                        100.0
                     ],
-                    "output": "Note",
+                    "output": "Volume",
                     "output_range": [
-                        40,
-                        86
+                        0,
+                        127
                     ],
                     "mapping": false,
                     "invert": false

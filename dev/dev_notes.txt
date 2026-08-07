@@ -26,11 +26,12 @@ Controls_frame:
 - TODO: disable slider if no corresponding parameter selected X
 - TODO: show Note range as letters not [0, 127] x
 - TODO: focus parameter selector menus to first item, not last X
-- TODO: midi channel selector
+- TODO: midi channel selector X
 
 - BUG: constrain channel_selector keyboard input
 - BUG: change slider bounds if input changed to Speed
 - BUG: update to letters when changing parameter to Note 
+- BUG: fix patch reset
 
 - TODO: add Undo Changes button to reset patch to last save state
 - TODO: widget to visualise current IO parameter values in range

@@ -115,10 +115,7 @@ class MidiOut():
                 # Guard for invalid entry
                 if new_channel not in range(16):
                     raise ValueError('MIDI channel must be in the range [0, 15]')
-
                 self.channel = new_channel
-
-                print(self.channel) # DEBUG
 
             except tk.TclError:
                 # Handles temporary invalid/empty inputs in GUI entry widgets
@@ -231,7 +228,6 @@ class MidiPlayer:
         self.settings.active_root_note.trace_add('write', self._update_active_scale_object)
         self.settings.active_root_name.trace_add('write', self._update_active_scale_object)
         
-
     def play(self, sample: dict[str, Any]) -> None:
         """Processes sensor data samples and sends them to the thread-safe queue."""
 
@@ -325,9 +321,7 @@ class MidiPlayer:
                         else:
                             # Send midi CC messages immediately.
                             self.midi_out.cc(param, value)
-
-                print(mapped_vals)  # DEBUG
-
+                            
             except queue.Empty:
                 break
 
