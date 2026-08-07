@@ -1,7 +1,7 @@
 import tkinter as tk
 
 class RangeSlider(tk.Canvas):
-    """A two-handle range slider built on Canvas."""
+    """A two-handle range slider."""
 
     def __init__(self, 
                  parent, 

@@ -87,20 +87,26 @@ class MidiOut():
     
     def __init__(self, settings: Settings, channel: int = 0) -> None:
         self.channel = channel
+        self._outport: mido.ports.BaseOutput | None = None
 
         # Pointers to global settings
         self.settings = settings
         self.control_codes = settings.control_codes
 
     def open_outport(self, port_name: str) -> None:
+        """Opens new MIDI ouput port."""
         self._outport = mido.open_output(port_name)  # type: ignore
 
     def close_outport(self) -> None:
-        self._outport.close()
+        """Closes open MIDI output port if any."""
+        if self._outport is not None:
+            self._outport.close()
+            self._outport = None
 
     def is_open(self) -> bool:
         """Returns True if outport exists and is open."""
-        return self._outport is not None and not getattr(self._outport, 'closed', True)
+        outport = getattr(self, '_outport', None)
+        return outport is not None and not getattr(self._outport, 'closed', True)
 
     def _safe_send(self, msg: mido.Message) -> None:
         """Guards against sending to closed ports."""
@@ -126,14 +132,6 @@ class MidiOut():
         Input values: pitch [0..127]
         """
         msg = mido.Message('note_off', channel=self.channel, note=pitch, velocity=0)
-        self._safe_send(msg)
-        
-    def pitch_bend(self, mod: int, ) -> None:
-        """
-        Continuous pitch modification via pitchwheel message
-        Input values: mod [-8192..8191]
-        """
-        msg = mido.Message('pitchwheel', channel=self.channel, pitch=mod)
         self._safe_send(msg)
 
     async def perc(self, pitch: int, duration: float = 0.1) -> None:
@@ -161,6 +159,33 @@ class MidiOut():
         cc = mido.Message('control_change', channel=channel, control=control_code, value=value )
         self._safe_send(cc)
 
+    def all_notes_off(self) -> None:
+        """Kills all notes."""
+        for pitch in range(128):
+            self.note_off(pitch)
+
+    def reset_param(self, param_name: str, active_note: int | None = None) -> None:
+        """Resets a specific output parameter to its default baseline state."""
+        if param_name == 'Note':
+            if active_note is not None:
+                self.note_off(active_note)
+            # self.all_notes_off()
+        elif param_name in self.control_codes:
+            # Default to neutral mid position
+            default_val = 64
+            self.cc(param_name, default_val)
+
+    def reset_all(self) -> None:
+        """Kills all notes and resets used controls to mid point."""
+        if not self.is_open():
+            return
+
+        self.all_notes_off()
+
+        # Reset standard CC channels to neutral mid position
+        for param_name in self.control_codes.keys():
+            self.reset_param(param_name, active_note=None)
+
 
 class MidiPlayer:
     def __init__(self, settings: Settings, midi_out: MidiOut) -> None:
@@ -174,7 +199,7 @@ class MidiPlayer:
         # Track midi note_value [0..127]
         self.previous_note = tk.IntVar(value=0)
 
-        # Thread-safe queue for buffering MIDI outputs across threads
+        # Thread-safe send queue for buffering MIDI outputs across threads
         self.midi_queue = queue.Queue()
 
         # Local active scale object
@@ -257,12 +282,19 @@ class MidiPlayer:
 
     async def process_queue(self) -> None:
         """
-        Flushes queue and sends all queued MIDI messages.
+        Sends all queued MIDI messages and clears send queue.
         Runs on the async loop so note playback can be scheduled correctly.
         """
         while not self.midi_queue.empty():
             try:
-                mapped_vals: dict[str, int] = self.midi_queue.get_nowait()
+                mapped_vals: dict[str, Any] = self.midi_queue.get_nowait()
+
+                # Handle internal parameter reset commands
+                if '_RESET_' in mapped_vals:
+                    reset_param = mapped_vals['_RESET_']
+                    last_note = mapped_vals.get('_VALUE_')
+                    self.midi_out.reset_param(reset_param, last_note)
+                    continue
 
                 for param, value in mapped_vals.items():
                     if value:
@@ -285,5 +317,29 @@ class MidiPlayer:
         self.active_scale_object = Scale(root, scale_type)
         # Update global setting
         self.settings.active_scale_full = self.active_scale_object.full
+
+    def reset_parameter(self, param_name: str) -> None:
+        """Queue a thread-safe reset command to reset a specific MIDI parameter."""
+        if param_name == 'Note':
+            last_note = self.previous_note.get()
+            self.previous_note.set(0)
+            self.midi_queue.put({'_RESET_': 'Note', '_VALUE_': last_note})
+        else:
+            self.midi_queue.put({'_RESET_': param_name})
+
+    def reset_all(self) -> None:
+        """Clears the pending MIDI queue and triggers immediate MIDI hardware reset."""
+        # Clear MIDI send queue
+        while not self.midi_queue.empty():
+            try:
+                self.midi_queue.get_nowait()
+            except queue.Empty:
+                break
+
+        # Clear tracked pitch
+        self.previous_note.set(0)
+
+        # Send hardware reset
+        self.midi_out.reset_all()
 
             

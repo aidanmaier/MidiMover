@@ -1,5 +1,4 @@
 import mido as md # type supressions needed for Backend methods
-import pygame.midi
 from threading import Lock
 from output import MidiOut
 from gui.config_frame import ConfigFrame
@@ -7,17 +6,13 @@ from gui.config_frame import ConfigFrame
 MIDI_LOCK = Lock()
 
 # Callable functions
-def get_ports(self) -> list:
-    """Returns a list of available MIDI ouput ports."""
+def get_ports(self) -> list[str]:
+    """Returns a list of available MIDI output ports using mido/rtmidi."""
     with MIDI_LOCK:
         try:
-            # Force Pygame MIDI to re-scan hardware ports on macOS
-            if pygame.midi.get_init():
-                pygame.midi.quit()
-            pygame.midi.init()
             return md.get_output_names() # type: ignore
         except Exception as e:
-            print(f"Error scanning MIDI ports via Pygame: {e}")
+            print(f"Error scanning MIDI ports via mido: {e}")
             return []
 
 def connect_port(self) -> object:
@@ -36,15 +31,8 @@ def disconnect_port(self) -> None:
     if midi_out and hasattr(midi_out, '_outport'):
         print('MIDI disconnected:', midi_out._outport, '\n') # DEBUG
 
-        # Reset all MIDI control parameters to a neutral position
-        for control_num in range(128):
-            msg = md.Message(
-                'control_change', 
-                channel=midi_out.channel, 
-                control=control_num, 
-                value=64
-                )
-            midi_out._outport.send(msg)
+        # Kill all notes and reset control parameters to a neutral position
+        midi_out.reset_all()
 
         # Clean up active notes/controllers on underlying mido port before closing
         midi_out._outport.reset() # type: ignore

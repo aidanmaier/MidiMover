@@ -135,12 +135,12 @@
             "legato": false,
             "parameters": {
                 "0": {
-                    "input": "Tilt",
+                    "input": "Speed",
                     "input_range": [
-                        -0.4,
-                        0.3
+                        30.0,
+                        65.0
                     ],
-                    "output": "Note",
+                    "output": "Attack",
                     "output_range": [
                         69,
                         76

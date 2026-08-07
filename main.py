@@ -17,14 +17,14 @@ from output import MidiOut, MidiPlayer
 # Configure Mido rtmidi backend to use CoreMIDI engine on macOS
 # to avoid python-rtmidi PyEval_RestoreThread GIL assertion failure
 def configure_mido_backend():
-    if sys.platform == "darwin":  # macOS
+    if sys.platform == "darwin": # macOS
         try:
             os.environ["RTMIDI_API"] = "MACOSX_CORE"  # force CoreMIDI driver
             mido.set_backend('mido.backends.rtmidi')  
             print("mido: Configured 'rtmidi' with native CoreMIDI backend for macOS.")
         except Exception as e:
             print(f"mido: Failed to load rtmidi backend ({e}). Falling back to default.")
-    else:  # Windows / Linux
+    else: # Windows / Linux
         try:
             mido.set_backend('mido.backends.rtmidi')
             print("mido: Configured 'rtmidi' backend.")
@@ -68,7 +68,8 @@ class App(tk.Tk):
 
         # Configure widget styling
         self.style = ttk.Style()
-        self.style.theme_use('alt') #('aqua', 'clam', 'alt', 'default', 'classic')
+        # Use tk theme for clearer disabled buttons
+        self.style.theme_use('alt') # tk styles: ('aqua', 'clam', 'alt', 'default', 'classic')
         self._configure_styles()
 
         # Background thread for async loop, as async not supported by tkinter
@@ -169,6 +170,10 @@ class App(tk.Tk):
 
     def _on_close(self):
         """ Cleanup handler before window closes. """
+        # Send full reset to MIDI hardware before exit
+        if hasattr(self, 'midi_player'):
+            self.midi_player.reset_all()
+        
         # Close any open connections
         self.tabs.connections.device_frame._disconnect_device()
         self.tabs.connections.midi_frame._disconnect_device()
@@ -191,8 +196,13 @@ class App(tk.Tk):
         if running:
             self._wait_for_listener_and_start(start_time=time.time())
         else:
+            # Stop the async streaming loop
             if self._stop_event is not None:
                 self._run_loop.call_soon_threadsafe(self._stop_event.set)
+            
+            # Reset all MIDI output channels immediately
+            if hasattr(self, 'midi_player'):
+                self.midi_player.reset_all()
 
     def _poll_midi_queue(self):
         """ Drain queued MIDI output requests on Tkinter's main thread """

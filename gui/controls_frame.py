@@ -42,6 +42,9 @@ class ControlsFrame(ttk.Frame):
         # Track dynamically created parameter widgets for cleanup
         self.parameter_selector_widgets = [] # ((in_selector_var, in_selector), (out_selector_var, out_selector))
         self.parameter_slider_widgets = [] # (in_slider, out_slider)
+
+        # Track active output parameters
+        self.active_output_tracker = {}  # {row_index: "Previous_Output_Name"}
     
         # Configure grid
         for i in range(3):
@@ -371,23 +374,17 @@ class ControlsFrame(ttk.Frame):
 
     def _refresh_available_types(self) -> None:
         """Handles available parameter types across all rows so no type can be used more than once."""
-        input_selections = [
-            in_var.get() for (in_var, in_sel), (out_var, out_sel) in self.parameter_selector_widgets
-            if in_var.get()
-        ]
+        # Currently used output parameters
         output_selections = [
             out_var.get() for (in_var, in_sel), (out_var, out_sel) in self.parameter_selector_widgets
             if out_var.get()
         ]
 
         for (in_var, in_sel), (out_var, out_sel) in self.parameter_selector_widgets:
-            own_input = in_var.get()
-            available_input = [
-                t for t in self.input_parameter_types
-                if t not in input_selections or t == own_input
-            ]
-            in_sel['values'] = available_input
+            # Input parameters can be used many times
+            in_sel['values'] = [t for t in self.input_parameter_types]
 
+            # Output parameters can only be used once
             own_output = out_var.get()
             available_output = [
                 t for t in self.output_parameter_types
@@ -438,7 +435,19 @@ class ControlsFrame(ttk.Frame):
         }
 
     def _on_type_selected(self, index: int) -> None:
-        """Called when a parameter-type combobox selection changes."""
+        """Resets parameter and refreshes UI when parameter selection changes."""
+        (in_var, _), (out_var, _) = self.parameter_selector_widgets[index]
+        new_output = out_var.get() or None
+        previous_output = self.active_output_tracker.get(index)
+
+        # If output parameter changed or was set to empty, reset previous parameter
+        if previous_output and previous_output != new_output:
+            if hasattr(self.master.master, 'midi_player'):
+                self.master.master.midi_player.reset_parameter(previous_output) #type: ignore
+
+        # Update state tracker
+        self.active_output_tracker[index] = new_output
+
         self._sync_row_data(index)
         self._refresh_available_types()
         self._update_slider_states(index)
@@ -473,9 +482,10 @@ class ControlsFrame(ttk.Frame):
             actual_low = int(low)
             actual_high = int(high)
 
-            # Convert numbers to letter names for Note parameters
+            # Convert numbers to letter names with numeric octave sign for Note parameters
             output_param = self.parameter_selector_widgets[index][1][0].get()
             if output_param == 'Note':
+                # Quantize to active scale notes
                 quantized_low = snap_to_scale(actual_low, self.settings.active_scale_full)
                 quantized_high = snap_to_scale(actual_high, self.settings.active_scale_full)
                 signed_low = midi_to_signed_pitch(quantized_low)
