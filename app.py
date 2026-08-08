@@ -178,9 +178,14 @@ class App(tk.Tk):
         self.tabs.connections.device_frame._disconnect_device()
         self.tabs.connections.midi_frame._disconnect_device()
 
-        # Stop stream
         if self.settings.running_status.get():
-            self.settings.running_status.set(False)
+            self.settings.running_status.set(False)    
+
+        # Wait for disconnect_device methods to finish running
+        connect_thread = getattr(self.tabs.connections.device_frame, '_connect_thread', None)
+        if connect_thread and connect_thread.is_alive():
+            connect_thread.join(timeout=1.0)
+
         self.destroy()
 
     def _threadsafe_callback(self, func):

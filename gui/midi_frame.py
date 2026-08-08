@@ -1,14 +1,12 @@
 import mido as md # type supressions needed for Backend methods
 from threading import Lock
 from output import MidiOut
+from settings import Settings
 from gui.config_frame import ConfigFrame
-
-MIDI_LOCK = Lock()
-
 # Callable functions
 def get_ports(self) -> list[str]:
     """Returns a list of available MIDI output ports using mido/rtmidi."""
-    with MIDI_LOCK:
+    with self.settings.midi_port_lock: # guard thread port access
         try:
             return md.get_output_names() # type: ignore
         except Exception as e:
@@ -41,7 +39,7 @@ def disconnect_port(self) -> None:
 
 class MidiFrame(ConfigFrame):
     """GUI frame for configuring MIDI connections."""
-    def __init__(self, container, settings, midi_out: MidiOut):
+    def __init__(self, container, settings: Settings, midi_out: MidiOut):
         super().__init__(
             container, 
             'Midi Settings', 
@@ -59,3 +57,4 @@ class MidiFrame(ConfigFrame):
         )
 
         self.midi_out = midi_out
+        self.settings = settings

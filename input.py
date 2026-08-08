@@ -86,9 +86,12 @@ class WebsocketServiceListener(ServiceListener):
 
     def on_error(self, ws: Any, error: Exception) -> None:
         """
-        Display error message.
+        Display error message and disconnect.
         """
         print(f'{self} error: {error}')
+        self.open = False
+        if self.on_disconnect:
+            self.on_disconnect()
 
     def on_close(self, ws: Any, close_code: int | None, reason: str) -> None:
         """

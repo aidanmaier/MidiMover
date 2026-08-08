@@ -7,13 +7,13 @@
     "input_disconnected_label": "< Connect Device >",
     "output_disconnected_label": "< Connect MIDI Port >",
     "default_sample_rate": 50,
-    "default_patch": "Note Circle",
+    "default_patch": "Spooky",
     "saved_patches_list": [
         "< new instrument >",
+        "Filter",
+        "SpaceScape",
         "Sound Drawing",
-        "Note Circle",
-        "Patch 3",
-        "Theremin",
+        "Spooky",
         "Little Lamb"
     ],
     "default_device": "SensorServer._websocket._tcp.local.",

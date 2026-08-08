@@ -65,7 +65,7 @@
                 }
             }
         },
-        "Sound Drawing": {
+        "Filter": {
             "description": "Bowed instrument metaphor",
             "channel": 0,
             "root_note": 0,
@@ -73,40 +73,105 @@
             "legato": false,
             "parameters": {
                 "0": {
-                    "input": "Speed",
+                    "input": "Turn",
                     "input_range": [
-                        0.0,
-                        100.0
+                        -1.0,
+                        1.0
                     ],
-                    "output": "Volume",
+                    "output": "Attack",
                     "output_range": [
-                        10,
-                        127
+                        0,
+                        72
                     ],
                     "mapping": false,
                     "invert": false
                 },
                 "1": {
-                    "input": "Tilt",
+                    "input": "Turn",
                     "input_range": [
                         -1.0,
                         1.0
                     ],
+                    "output": "Release",
+                    "output_range": [
+                        0,
+                        96
+                    ],
+                    "mapping": false,
+                    "invert": true
+                },
+                "2": {
+                    "input": "Tilt",
+                    "input_range": [
+                        -1.0,
+                        -0.04
+                    ],
                     "output": "Filt Cut",
                     "output_range": [
                         0,
+                        57
+                    ],
+                    "mapping": false,
+                    "invert": false
+                },
+                "3": {
+                    "input": "Tilt",
+                    "input_range": [
+                        -0.04,
+                        1.0
+                    ],
+                    "output": "Filt Res",
+                    "output_range": [
+                        57,
+                        127
+                    ],
+                    "mapping": false,
+                    "invert": false
+                }
+            }
+        },
+        "SpaceScape": {
+            "description": "A musical scale forming a circle around the player.",
+            "channel": 1,
+            "root_note": 2,
+            "scale": "Melodic Minor",
+            "legato": false,
+            "parameters": {
+                "0": {
+                    "input": "Tilt",
+                    "input_range": [
+                        -0.56,
+                        0.6
+                    ],
+                    "output": "Note",
+                    "output_range": [
+                        38,
+                        83
+                    ],
+                    "mapping": false,
+                    "invert": false
+                },
+                "1": {
+                    "input": "Turn",
+                    "input_range": [
+                        -1.0,
+                        1.0
+                    ],
+                    "output": "User 1",
+                    "output_range": [
+                        5,
                         127
                     ],
                     "mapping": false,
                     "invert": true
                 },
                 "2": {
-                    "input": null,
+                    "input": "Twist",
                     "input_range": [
                         -1.0,
                         1.0
                     ],
-                    "output": null,
+                    "output": "User 2",
                     "output_range": [
                         0,
                         127
@@ -115,12 +180,12 @@
                     "invert": false
                 },
                 "3": {
-                    "input": null,
+                    "input": "Twist",
                     "input_range": [
                         -1.0,
                         1.0
                     ],
-                    "output": null,
+                    "output": "User 3",
                     "output_range": [
                         0,
                         127
@@ -130,74 +195,9 @@
                 }
             }
         },
-        "Note Circle": {
-            "description": "A musical scale forming a circle around the player.",
-            "channel": 0,
-            "root_note": 2,
-            "scale": "Lydian",
-            "legato": false,
-            "parameters": {
-                "0": {
-                    "input": null,
-                    "input_range": [
-                        -1.0,
-                        1.0
-                    ],
-                    "output": null,
-                    "output_range": [
-                        0,
-                        127
-                    ],
-                    "mapping": false,
-                    "invert": false
-                },
-                "1": {
-                    "input": "Speed",
-                    "input_range": [
-                        0.0,
-                        100.0
-                    ],
-                    "output": "Volume",
-                    "output_range": [
-                        0,
-                        127
-                    ],
-                    "mapping": false,
-                    "invert": false
-                },
-                "2": {
-                    "input": null,
-                    "input_range": [
-                        -1.0,
-                        1.0
-                    ],
-                    "output": null,
-                    "output_range": [
-                        0,
-                        127
-                    ],
-                    "mapping": false,
-                    "invert": false
-                },
-                "3": {
-                    "input": null,
-                    "input_range": [
-                        -1.0,
-                        1.0
-                    ],
-                    "output": null,
-                    "output_range": [
-                        0,
-                        127
-                    ],
-                    "mapping": false,
-                    "invert": false
-                }
-            }
-        },
-        "Patch 3": {
+        "Sound Drawing": {
             "description": "A blank canvas.",
-            "channel": 0,
+            "channel": 2,
             "root_note": 2,
             "scale": "Major Pentatonic",
             "legato": false,
@@ -231,12 +231,12 @@
                     "invert": false
                 },
                 "2": {
-                    "input": null,
+                    "input": "Tilt",
                     "input_range": [
                         -1.0,
                         1.0
                     ],
-                    "output": null,
+                    "output": "Filt Res",
                     "output_range": [
                         0,
                         127
@@ -260,23 +260,23 @@
                 }
             }
         },
-        "Theremin": {
+        "Spooky": {
             "description": "A theremin-like.",
-            "channel": 2,
+            "channel": 3,
             "root_note": 6,
-            "scale": "Chromatic",
+            "scale": "Minor Pentatonic",
             "legato": false,
             "parameters": {
                 "0": {
                     "input": "Tilt",
                     "input_range": [
-                        -0.4,
-                        0.44
+                        -0.32,
+                        0.6
                     ],
                     "output": "Note",
                     "output_range": [
-                        45,
-                        82
+                        18,
+                        101
                     ],
                     "mapping": false,
                     "invert": false
@@ -327,7 +327,7 @@
         },
         "Little Lamb": {
             "description": "For simple melodies",
-            "channel": 0,
+            "channel": 4,
             "root_note": 2,
             "scale": "Major",
             "legato": false,
@@ -336,7 +336,7 @@
                     "input": "Tilt",
                     "input_range": [
                         -0.42,
-                        0.41
+                        0.4
                     ],
                     "output": "Note",
                     "output_range": [
@@ -358,7 +358,7 @@
                         127
                     ],
                     "mapping": false,
-                    "invert": false
+                    "invert": true
                 },
                 "2": {
                     "input": null,

@@ -27,9 +27,9 @@ Controls_frame:
 - TODO: show Note range as letters not [0, 127] x
 - TODO: focus parameter selector menus to first item, not last X
 - TODO: midi channel selector X
+- BUG: change slider bounds if input changed to Speed X
 
 - BUG: constrain channel_selector keyboard input
-- BUG: change slider bounds if input changed to Speed
 - BUG: update to letters when changing parameter to Note 
 - BUG: fix patch reset
 
@@ -41,8 +41,7 @@ Ouput:
 - TODO: change parameter exclusivity so a single motion param can map to many midi params but not vice versa X
 - BUG: on stop, midi device left hanging so all notes sustain when restarted X
 - TODO: send parameter reset message when on parameter change so nothing left stuck on 0 e.g. vol or filt_cut x
-
-- BUG: 'Speed' not mapping to output range
+- BUG: 'Speed' not mapping to output range X
 
 ERROR:
 

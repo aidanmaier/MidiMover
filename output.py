@@ -93,19 +93,22 @@ class MidiOut():
         self.settings = settings
         self.control_codes = settings.control_codes
         self.active_midi_channel = settings.active_midi_channel
+        self._port_lock = settings.midi_port_lock
 
         # Track MIDI channel changes
         self.active_midi_channel.trace_add('write', self._update_channel)
 
     def open_outport(self, port_name: str) -> None:
         """Opens new MIDI ouput port."""
-        self._outport = mido.open_output(port_name)  # type: ignore
+        with self._port_lock: # guard thread port access
+            self._outport = mido.open_output(port_name)  # type: ignore
 
     def close_outport(self) -> None:
         """Closes open MIDI output port if any."""
-        if self._outport is not None:
-            self._outport.close()
-            self._outport = None
+        with self._port_lock: # guard thread port access
+            if self._outport is not None:
+                self._outport.close()
+                self._outport = None
 
     def _update_channel(self, *args) -> None:
             """Callback triggered when settings.active_midi_channel is modified."""
@@ -128,13 +131,14 @@ class MidiOut():
 
     def _safe_send(self, msg: mido.Message) -> None:
         """Guards against sending to closed ports."""
-        if not self.is_open():
-            return
+        with self._port_lock: # guard thread port access
+            if not self.is_open():
+                return
 
-        try:
-            self._outport.send(msg)  # type: ignore
-        except (ValueError, RuntimeError) as e:
-            print(f"MidiOut Warning: Cannot send message. Port closed or invalid ({e}).")
+            try:
+                self._outport.send(msg)  # type: ignore
+            except (ValueError, RuntimeError) as e:
+                print(f"MidiOut Warning: Cannot send message. Port closed or invalid ({e}).")
     
     def note_on(self, pitch: int) -> None:
         """
@@ -172,9 +176,8 @@ class MidiOut():
             control [valid controls held in midi.CONTROL_CODES], 
             value [0..127]
         """
-        channel = self.channel
         control_code = self.control_codes[control]
-        cc = mido.Message('control_change', channel=channel, control=control_code, value=value )
+        cc = mido.Message('control_change', channel=self.channel, control=control_code, value=value )
         self._safe_send(cc)
 
     def all_notes_off(self) -> None:
@@ -195,14 +198,15 @@ class MidiOut():
 
     def reset_all(self) -> None:
         """Kills all notes and resets used controls to mid point."""
-        if not self.is_open():
-            return
+        with self._port_lock: # guard thread port access
+            if not self.is_open():
+                return
 
-        self.all_notes_off()
+            self.all_notes_off()
 
-        # Reset standard CC channels to neutral mid position
-        for param_name in self.control_codes.keys():
-            self.reset_param(param_name, active_note=None)
+            # Reset standard CC channels to neutral mid position
+            for param_name in self.control_codes.keys():
+                self.reset_param(param_name, active_note=None)
 
 
 class MidiPlayer:
@@ -321,6 +325,8 @@ class MidiPlayer:
                         else:
                             # Send midi CC messages immediately.
                             self.midi_out.cc(param, value)
+
+                print(mapped_vals) #DEBUG
                             
             except queue.Empty:
                 break

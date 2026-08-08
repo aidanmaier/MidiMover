@@ -1,7 +1,9 @@
 import tkinter as tk
 import os
-from pathlib import Path
 import json
+from pathlib import Path
+from threading import RLock
+
 
 # Hardcoded backup defaults, immutable from within app
 FACTORY_SETTINGS = {
@@ -85,15 +87,15 @@ SCALE_PATTERNS = {
 
 # Default MIDI CC controls
 CONTROL_CODES = {
-    'Volume': 7,
+    'Volume': 7, # master volume/output
     'Filt Res': 71, # filter resonance
     'Filt Cut': 74, # filter cutoff
-    'Attack': 73,
-    'Release': 72,
-    'User 1': 85, # Custom user parameter 1
-    'User 2': 86, # Custom user parameter 2
-    'User 3': 89, # Custom user parameter 3
-    'User 4': 90, # Custom user parameter 4
+    'Attack': 73, # volume envelope attack
+    'Release': 72, # volume envelope release
+    'User 1': 85, # custom user parameter 1
+    'User 2': 86, # custom user parameter 2
+    'User 3': 89, # custom user parameter 3
+    'User 4': 90, # custom user parameter 4
 }
 
 
@@ -109,6 +111,9 @@ class Settings:
         self.note_names = NOTE_NAMES
         self.scale_patterns = SCALE_PATTERNS
         self.control_codes = CONTROL_CODES
+
+        # Guards access to MidiOutput._outport across threads to avoid PyEval_RestoreThread GIL assertion bug
+        self.midi_port_lock = RLock() # re-entrant lock can be acquired multiple times by the same thread
 
         self.saved_settings = self._load_settings()
         s = self.saved_settings
