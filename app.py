@@ -164,9 +164,13 @@ class App(tk.Tk):
         if self.running_status.get():
             self.running_status.set(False)
 
-            # Reset GUI
-            self.tabs.connections.device_frame._on_unexpected_disconnect()
-            self.header.start_button.config(state='disable', text='PLAY', style='Default.TButton')
+        # Reset GUI
+        self.tabs.connections.device_frame._on_unexpected_disconnect()
+        self.header.start_button.config(
+            state='normal' if self.header.ready_state.get() else 'disable', 
+            text='PLAY', 
+            style='Default.TButton'
+            )
 
     def _on_close(self):
         """ Cleanup handler before window closes. """
@@ -236,9 +240,13 @@ class App(tk.Tk):
             )
             self._stream_future = asyncio.run_coroutine_threadsafe(coro, self._run_loop)
             self._stream_future.add_done_callback(self._on_stream_done)
-
         elif time.time() - start_time > timeout:
             self.running_status.set(False)
+            self.header.start_button.config(
+                state='normal' if self.header.ready_state.get() else 'disable', 
+                text='PLAY', 
+                style='Default.TButton'
+            )
             print("Timeout Error: Websocket listener failed to open in time.")
         else:
             self.after(50, lambda: self._wait_for_listener_and_start(start_time, timeout))

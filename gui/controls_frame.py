@@ -136,8 +136,8 @@ class ControlsFrame(ttk.Frame):
 
         self.channel_selector = ttk.Spinbox(
             self.channel_frame,
-            from_=0,
-            to=15,
+            from_=1,
+            to=16,
             textvariable=self.display_midi_channel,
             width=3,
         )

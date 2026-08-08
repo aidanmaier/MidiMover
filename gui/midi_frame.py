@@ -32,9 +32,6 @@ def disconnect_port(self) -> None:
         # Kill all notes and reset control parameters to a neutral position
         midi_out.reset_all()
 
-        # Clean up active notes/controllers on underlying mido port before closing
-        midi_out._outport.reset() # type: ignore
-
         midi_out.close_outport()
 
 class MidiFrame(ConfigFrame):

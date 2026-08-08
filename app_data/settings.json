@@ -7,7 +7,7 @@
     "input_disconnected_label": "< Connect Device >",
     "output_disconnected_label": "< Connect MIDI Port >",
     "default_sample_rate": 50,
-    "default_patch": "Spooky",
+    "default_patch": "Filter",
     "saved_patches_list": [
         "< new instrument >",
         "Filter",
