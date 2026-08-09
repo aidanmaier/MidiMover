@@ -3,7 +3,7 @@ import pandas as pd
 from zeroconf import ServiceBrowser, Zeroconf
 from sys import path
 path.insert(0, "../")
-from logic.capture import DataStreamer
+from input import DataStreamer, WebsocketServiceListener
 
 def estimate_sample_rate(dataframe: pd.DataFrame) -> float:
     """
@@ -27,7 +27,7 @@ axes = ['x', 'y', 'z', 'w'] # Android sensor all return x, y, z and rotation_vec
 sample_rate = 50 # Hz
 
 # Output variabls
-output_directory = '../data/'
+output_directory = '../test_data/'
 output_filename = 'test.csv'
 
 labels = [sensors, axes]
@@ -58,7 +58,8 @@ def save_sample(sample):
     df.loc[timestamp, cols] = ds.values
 
 # Input object
-data = DataStreamer(ws_address, sensors)
+listener = WebsocketServiceListener(sensors, lambda: print('\non_disconnect\n') )
+data = DataStreamer(listener)
 
 async def main():
 

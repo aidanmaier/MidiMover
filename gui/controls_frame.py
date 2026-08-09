@@ -28,6 +28,7 @@ class ControlsFrame(ttk.Frame):
 
         self.running_status: tk.BooleanVar = self.settings.running_status
         self.active_midi_channel: tk.IntVar = self.settings.active_midi_channel
+        self.lock_var: tk.BooleanVar = self.settings.controls_lock
 
         # Local constants
         self.name = 'Controls'
@@ -206,17 +207,16 @@ class ControlsFrame(ttk.Frame):
         )
         self.scale_var_selector.grid(column=3, row=0, **self.options)
 
-        # Legato button
-        self.legato_var = tk.BooleanVar(value=False, )
-        self.legato_button = ttk.Button(
+        # lock button
+        self.lock_button = ttk.Button(
             self.footer_frame, 
-            text='Legato', 
-            style='Active.TButton' if self.legato_var.get() else 'Default.TButton',
+            text='Lock', 
+            style='Active.TButton' if self.lock_var.get() else 'Default.TButton',
             width=11,
-            command=self._on_legato_button,
-            state='disabled' # TODO: implement legato
+            command=self._on_lock_button,
+            state='normal',
         )
-        self.legato_button.grid(column=2, row=0, **self.options)
+        self.lock_button.grid(column=2, row=0, **self.options)
 
     def _build_parameter_controls(self, index: int) -> None:
         """Builds input/output parameter mapping controls."""
@@ -546,7 +546,7 @@ class ControlsFrame(ttk.Frame):
         cleaned_name = loaded_patch.removesuffix(' (default)')
         self.cleaned_loaded_patch_name.set(cleaned_name)    
 
-        # Sync scale, root note and legato from saved patch data
+        # Sync scale and root note from saved patch data
         patch_info = self.settings.saved_patches_data.get('patches', {}).get(cleaned_name, {})
         if patch_info:
             if 'scale' in patch_info:
@@ -554,9 +554,6 @@ class ControlsFrame(ttk.Frame):
             if 'root_note' in patch_info:
                 root_note = patch_info['root_note']
                 self.active_root_name.set(self.note_names[root_note])
-            if 'legato' in patch_info:
-                self.legato_var.set(patch_info['legato'])
-                self._update_legato_button()
 
         # Destroy all child widgets in parameters_frame 
         for child in self.parameters_frame.winfo_children():
@@ -565,14 +562,13 @@ class ControlsFrame(ttk.Frame):
         self.parameter_selector_widgets.clear()
         self.parameter_slider_widgets.clear()
 
-        # self.settings.loaded_patch_parameters_data = self.settings.loaded_patch_parameters_data
-
         # Parameter controls
         for i in range(4):
             self._build_parameter_controls(i)
 
         # Populate dropdown values 
         self._refresh_available_types()
+        self._update_lock_state()
         self.patch_altered.set(False)
         
     def _update_patch_button_states(self, *args) -> None:
@@ -635,7 +631,6 @@ class ControlsFrame(ttk.Frame):
             patch_data['channel'] = self.active_midi_channel.get()
             patch_data['root_note'] = self.active_root_note.get()
             patch_data['scale'] = self.active_scale.get()
-            patch_data['legato'] = self.legato_var.get()
             
             # Save patches file to json
             with open(self.settings.patches_filepath, 'w') as f:
@@ -765,21 +760,66 @@ class ControlsFrame(ttk.Frame):
         """Flips recenter button state."""
         pass
 
-    def _update_legato_button(self) -> None:
-        """Refreshes legato button style."""
-        new_state = self.legato_var.get()
-        if new_state:
-            self.legato_button.config(style='Active.TButton')
-        else:
-            self.legato_button.config(style='Default.TButton')
+    def _update_lock_state(self) -> None:
+        """Locks/unlocks patch controls and refreshes lock button style."""
+        locked = self.lock_var.get()
 
-    def _on_legato_button(self) -> None:
-        """Flips legato button state and updates style."""
+        if locked:
+            self.lock_button.config(style='Active.TButton', text='Unlock')
+        else:
+            self.lock_button.config(style='Default.TButton', text='Lock')
+
+        combobox_state = 'disabled' if locked else 'readonly'
+        other_state = 'disabled' if locked else 'normal'
+
+        # Scale / root note selectors
+        self.root_var_selector.config(state=combobox_state)
+        self.scale_var_selector.config(state=combobox_state)
+
+        # Recenter button
+        self.recenter_button.config(state=other_state)
+
+        # Patch action buttons: forcibly disable while locked; defer to their own
+        # existing rules (patch_altered / default-patch checks) once unlocked, so
+        # unlocking doesn't wrongly re-enable a button that should stay disabled.
+        if locked:
+            self.save_patch_button.config(state='disabled')
+            self.reset_patch_button.config(state='disabled')
+            self.default_patch_button.config(state='disabled')
+        else:
+            self._update_patch_button_states()
+            self._update_default_patch_button()
+
+        # MIDI channel selector: same deferral pattern (respects running_status)
+        if locked:
+            self.channel_selector.config(state='disabled')
+        else:
+            self._update_channel_selector_state()
+
+        # Per-row parameter selectors
+        for (in_var, in_sel), (out_var, out_sel) in self.parameter_selector_widgets:
+            in_sel.config(state=combobox_state)
+            out_sel.config(state=combobox_state)
+
+        # Per-row sliders and connector buttons
+        for index in range(len(self.parameter_slider_widgets)):
+            if locked:
+                widgets = self.parameter_slider_widgets[index]
+                widgets['input_slider'].configure(state='disabled')
+                widgets['output_slider'].configure(state='disabled')
+                widgets['mapping_button'].configure(state='disabled')
+                widgets['invert_button'].configure(state='disabled')
+            else:
+                # Defer to existing logic, which only enables a slider/button
+                # if its paired combobox actually has a value selected.
+                self._update_slider_states(index)
+
+    def _on_lock_button(self) -> None:
+        """Flips lock button state and updates style."""
         # Flip current toggle state
-        new_state = not self.legato_var.get()
-        self.legato_var.set(new_state)
-        self.patch_altered.set(True)
-        self._update_legato_button()
+        new_state = not self.lock_var.get()
+        self.lock_var.set(new_state)
+        self._update_lock_state()
 
 
         

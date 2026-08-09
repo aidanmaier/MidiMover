@@ -5,7 +5,6 @@
             "channel": 0,
             "root_note": 2,
             "scale": "Major Pentatonic",
-            "legato": false,
             "parameters": {
                 "0": {
                     "input": null,
@@ -68,9 +67,8 @@
         "Filter": {
             "description": "Bowed instrument metaphor",
             "channel": 0,
-            "root_note": 0,
+            "root_note": 2,
             "scale": "Major",
-            "legato": false,
             "parameters": {
                 "0": {
                     "input": "Turn",
@@ -135,7 +133,6 @@
             "channel": 1,
             "root_note": 2,
             "scale": "Melodic Minor",
-            "legato": false,
             "parameters": {
                 "0": {
                     "input": "Tilt",
@@ -200,7 +197,6 @@
             "channel": 2,
             "root_note": 2,
             "scale": "Major Pentatonic",
-            "legato": false,
             "parameters": {
                 "0": {
                     "input": "Tilt",
@@ -265,7 +261,6 @@
             "channel": 3,
             "root_note": 6,
             "scale": "Minor Pentatonic",
-            "legato": false,
             "parameters": {
                 "0": {
                     "input": "Tilt",
@@ -330,7 +325,6 @@
             "channel": 4,
             "root_note": 2,
             "scale": "Major",
-            "legato": false,
             "parameters": {
                 "0": {
                     "input": "Tilt",

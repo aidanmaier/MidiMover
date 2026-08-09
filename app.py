@@ -167,7 +167,7 @@ class App(tk.Tk):
         # Reset GUI
         self.tabs.connections.device_frame._on_unexpected_disconnect()
         self.header.start_button.config(
-            state='normal' if self.header.ready_state.get() else 'disable', 
+            state='normal' if self.header.ready_state.get() else 'disabled', 
             text='PLAY', 
             style='Default.TButton'
             )
@@ -243,7 +243,7 @@ class App(tk.Tk):
         elif time.time() - start_time > timeout:
             self.running_status.set(False)
             self.header.start_button.config(
-                state='normal' if self.header.ready_state.get() else 'disable', 
+                state='normal' if self.header.ready_state.get() else 'disabled', 
                 text='PLAY', 
                 style='Default.TButton'
             )

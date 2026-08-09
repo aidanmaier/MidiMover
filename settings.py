@@ -24,7 +24,6 @@ FACTORY_PATCHES = {
             "channel": 0,
             "root_note" : 2,
             "scale": "Major",
-            "legato": False,
             "parameters": {
                 "0": {
                     "exponential" : False,
@@ -123,7 +122,7 @@ class Settings:
 
         # Immutable app settings
         self.input_parameter_types = [
-            '', # blank parameter = no output
+            '', # blank parameter = no input
             'Speed', 
             'Tilt', 
             'Turn', 
@@ -147,6 +146,7 @@ class Settings:
         self.active_root_note = tk.IntVar(value=2) # root note number
         self.active_root_name = tk.StringVar(value=self.note_names[self.active_root_note.get()]) # root note letter
         self.active_scale_full = []
+        self.controls_lock = tk.BooleanVar(value=False)
 
         self.saved_patches_list = list(p['patches'].keys())
 

@@ -234,7 +234,6 @@ class MidiPlayer:
         
     def play(self, sample: dict[str, Any]) -> None:
         """Processes sensor data samples and sends them to the thread-safe queue."""
-
         # Raw sensor data
         acceleration: list[float] = sample['sensors']['linear_acceleration']
         rotation: list[float] = sample['sensors']['rotation_vector']
@@ -244,11 +243,12 @@ class MidiPlayer:
             return 
 
         # Processed input parameters
-        pitch, roll, yaw = rotation[:3]
-        speed = calculate_magnitude(acceleration)
+        pitch, roll, yaw = rotation[:3] # rotation around x, y, z axes
+        magnitude = calculate_magnitude(acceleration) # sum of accel in any direction
 
+        # Map UI input parameters to sensor parameters
         input_values = {
-            "Speed" : speed,
+            "Speed" : magnitude,
             "Turn" : yaw,
             "Tilt" : pitch,
             "Twist" : roll, 
@@ -258,8 +258,10 @@ class MidiPlayer:
         patch_parameters = self.settings.loaded_patch_parameters_data
         mapped_vals: dict[str, int | None] = {}
 
-        # Iterate through patch parameters to extract in/out mappings
+        # Iterate through patch parameters
         for param_id, config in patch_parameters.items():
+
+            # extract in/out mappings
             input_name = config.get("input")
             output_name = config.get("output")
             in_range = config.get("input_range", [])
@@ -270,6 +272,7 @@ class MidiPlayer:
             # Skip unused or incomplete parameters
             if not input_name or not output_name or len(in_range) < 2 or len(out_range) < 2:
                 continue
+            
 
             # Write mapped input_value to mapped_vals
             sensor_value = input_values.get(input_name)            
@@ -304,7 +307,7 @@ class MidiPlayer:
     async def process_queue(self) -> None:
         """
         Sends all queued MIDI messages and clears send queue.
-        Runs on the async loop so note playback can be scheduled correctly.
+        Runs on the async loop but callable from tkinter main thread.
         """
         while not self.midi_queue.empty():
             try:
@@ -341,6 +344,7 @@ class MidiPlayer:
 
     def reset_parameter(self, param_name: str) -> None:
         """Queue a thread-safe reset command to reset a specific MIDI parameter."""
+        # Send reset messages to the MIDI send queue
         if param_name == 'Note':
             last_note = self.previous_note.get()
             self.previous_note.set(0)
@@ -357,7 +361,7 @@ class MidiPlayer:
             except queue.Empty:
                 break
 
-        # Clear tracked pitch
+        # Clear tracked pitch and output values
         self.previous_note.set(0)
 
         # Send hardware reset
