@@ -2,14 +2,18 @@ import time
 import asyncio
 import pandas as pd
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Optional
+from sys import path
+path.insert(0, "../")
+from app import App
+
+INPUT_DIR = Path(__file__).resolve().parent / 'test_data'
+INPUT_FILENAME = 'test.csv'
+LOOP = True # loop playback
 
 class DataLoader():
     def __init__(self, directory: str | Path, filename: str) -> None:
-        """
-        Loads captured motion sensor data from .csv to df.
-        """
-        
+        """Loads captured motion sensor data from .csv into DataFrame."""
         self.dir = Path(directory)
         self.file = filename
         self.filepath = self.dir / filename
@@ -17,71 +21,127 @@ class DataLoader():
         # Load data to df from .csv
         df = pd.read_csv(self.filepath, header=[0, 1], index_col=0)
         self.data = df
-        self.sensors = {tup[0] for tup in df.columns} # set of available sensors
+        self.sensors = {tup[0] for tup in df.columns}  # Set of available sensors
 
-        self.length = (df.index[-1] - df.index[0]) / 1_000_000_000  # length in seconds
-        self.samples = len(df.index) # number of samples
-        self.sample_rate = (self.samples - 1) / self.length # in Hz
-        self.sample_period = 1 / self.sample_rate # sample period in seconds
+        self.length = (df.index[-1] - df.index[0]) / 1_000_000_000.0  # Length in seconds
+        self.samples = len(df.index)  # Number of samples
+        self.sample_rate = (self.samples - 1) / self.length if self.length > 0 else 50.0
+        self.sample_period = 1 / self.sample_rate
 
-    def get_sample(self, index: int) -> pd.Series:
-        """
-        Returns a pd.Series of all sensor values at the given index.
-        """
+    def get_sample(self, index: int) -> dict:
+        """Returns sample formatted as dictionary expected by MidiPlayer."""
+        row = self.data.iloc[index]
+        timestamp = self.data.index[index]
 
-        sample = self.data.iloc[index]
-        return sample
+        sensors = {}
+        for (sensor, _), val in row.items(): # type: ignore
+            if sensor not in sensors:
+                sensors[sensor] = []
+            if pd.notna(val):
+                sensors[sensor].append(val)
 
-    async def stream(self, callback: Callable[[pd.Series], None], loop: bool = False) -> None:
-        """
-        Streams loaded data at its average sample rate, and triggers the callback function for each sample.
-        """
+        return {
+            'timestamp': timestamp,
+            'sensors': sensors
+        }
 
-        next_time = time.monotonic() # start forward-only clock
+    async def stream(
+        self,
+        callback: Callable[[dict], None],
+        speed_factor: float = 1.0,
+        loop: bool = False,
+        stop_event: Optional[asyncio.Event] = None
+    ) -> None:
+        """Streams loaded data at average recorded rate."""
+        if self.samples == 0:
+            return
+
         index = 0
+        start_ts = self.data.index[0]
+        start_mono = time.monotonic()
 
         while index < self.samples:
+            if stop_event and stop_event.is_set():
+                break
 
-            # Iterate through samples in data stream and trigger callback function for each
+            # 1. Trigger callback with current sample
             sample = self.get_sample(index)
             callback(sample)
             index += 1
 
-            # Normalise loop time to sample_period
-            next_time += self.sample_period # ideal sample period length
-            delay = next_time - time.monotonic() # remainder after subtracting elapsed time
+            # 2. If finished and looping, reset benchmark clock
+            if index >= self.samples:
+                if loop:
+                    index = 0
+                    start_ts = self.data.index[0]
+                    start_mono = time.monotonic()
+                else:
+                    break
+
+            # 3. Calculate target sleep duration based on exact recorded timestamp difference
+            next_ts = self.data.index[index]
+            target_elapsed = ((next_ts - start_ts) / 1_000_000_000.0) / speed_factor
+            actual_elapsed = time.monotonic() - start_mono
+            delay = target_elapsed - actual_elapsed
+
             if delay > 0:
-                await asyncio.sleep(delay) # wait for duration of remainder
+                await asyncio.sleep(delay)
 
-            # If loop, restart the index at completion
-            if (index >= self.samples) and loop:
-                index = 0
 
-# TEST CODE:
+class PlaybackApp(App):
+    """Development App subclass that plays back sensor data from a .csv file."""
+
+    def __init__(self, input_dir: Path = INPUT_DIR, input_filename: str = INPUT_FILENAME):
+        # Load recorded CSV data
+        self.data_loader = DataLoader(input_dir, input_filename)
+
+        super().__init__()
+
+        # Update available sensors in settings from loaded dataset
+        self.settings.sensors = list(self.data_loader.sensors)
+
+    def _on_running_status_change(self, *args):
+        """Starts/stops CSV playback on running status change."""
+        running = self.running_status.get()
+
+        if running:
+            self._start_playback()
+        else:
+            # Cancel playback loop thread-safely
+            if self._stop_event is not None:
+                self._run_loop.call_soon_threadsafe(self._stop_event.set)
+
+            # Silence MIDI notes on stop
+            if hasattr(self, 'midi_player'):
+                self.midi_player.reset_all()
+
+    def _start_playback(self):
+        """Schedules CSV data streaming on the background asyncio loop."""
+        self._stop_event = asyncio.Event()
+
+        coro = self.data_loader.stream(
+            callback=self.midi_player.play,
+            speed_factor=1.0,
+            loop=LOOP,
+            stop_event=self._stop_event
+        )
+
+        self._stream_future = asyncio.run_coroutine_threadsafe(coro, self._run_loop)
+        self._stream_future.add_done_callback(self._on_playback_done)
+
+    def _on_playback_done(self, future):
+        """Handles completion or errors on stream finish."""
+        if future.cancelled():
+            return
+
+        exc = future.exception()
+        if exc is not None:
+            print(f"Playback error: {exc!r}")
+
+        # Reset UI button state back to PLAY when file finishes
+        self.after(0, lambda: self.running_status.set(False))
+
 
 if __name__ == '__main__':
-    
-# Input variables
-    input_directory = Path(__file__).resolve().parent.parent / 'data'
-    input_filename = 'test.csv'
-
-    # Callback functions
-    def z_rotation(sample: pd.Series):
-        # streaming rotation around z axis
-        sensor = 'rotation_vector'
-        axis = 'z'
-        z_value = float(sample[(sensor, axis)]) 
-        # print(f'{sensor} {axis}: {z_value}') 
-        print(sample)
-
-    def print_values(sample: pd.Series):
-        print(sample)
-
-    async def main():
-
-        # Load sensor data from .csv
-        data = DataLoader(input_directory, input_filename)
-        await data.stream(callback=print_values, loop=False)
-        print(f'\nSample rate: {data.sample_rate}, Sample period: {data.sample_period}\n') #DEBUG
-
-    asyncio.run(main())
+    app = PlaybackApp()
+    app.mainloop()

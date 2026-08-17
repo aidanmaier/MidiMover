@@ -1,80 +1,69 @@
-import asyncio
+import os
 import pandas as pd
-from zeroconf import ServiceBrowser, Zeroconf
+from pathlib import Path
 from sys import path
 path.insert(0, "../")
-from input import DataStreamer, WebsocketServiceListener
+from app import App
 
-def estimate_sample_rate(dataframe: pd.DataFrame) -> float:
-    """
-    Estimate the average sample rate from the recorded timestamp span.
-    """
-    timestamps = pd.to_numeric(pd.Series(dataframe.index))
-    ordered = timestamps.sort_values()
-    duration_seconds = (ordered.iloc[-1] - ordered.iloc[0]) / 1_000_000_000 # convert ns to s
-    return (len(ordered) - 1) / duration_seconds
+AXES = ['x', 'y', 'z', 'w']
+OUTPUT_DIR = Path(__file__).resolve().parent / 'test_data'
+OUTPUT_FILENAME = 'test.csv'
 
-# Input variables
-ws_address = '_websocket._tcp.local.'
-sensors = [
-    'gyroscope', 
-    'accelerometer', 
-    'rotation_vector', 
-    'linear_acceleration',
-    'gravity'
-        ]
-axes = ['x', 'y', 'z', 'w'] # Android sensor all return x, y, z and rotation_vector also returns w (scalar)
-sample_rate = 50 # Hz
+class RecordingApp(App):
+    """Development App subclass that records input data to .csv file."""
 
-# Output variabls
-output_directory = '../test_data/'
-output_filename = 'test.csv'
+    def __init__(self):
+        super().__init__()
 
-labels = [sensors, axes]
-cols = pd.MultiIndex.from_product(labels, names=['Sensor', 'Axis'])
-df = pd.DataFrame(columns=cols)
+        # Saved data structure
+        labels = [self.settings.sensors, AXES]
+        self._record_cols = pd.MultiIndex.from_product(labels, names=['Sensor', 'Axis'])
+        self._recorded = pd.DataFrame(columns=self._record_cols)
 
-# Callback function
-def save_sample(sample):
-    
-    # Extract timestamp for index
-    timestamp = sample.get('timestamp')
-    if timestamp is None:
-        return
-    
-    # Data structure
-    ds = pd.Series(index=cols, dtype=float)
-    
-    # Extract data
-    sensor_data = sample.get('sensors', {})
-    for sensor in sensors:
-        values = sensor_data.get(sensor, [])
-        # Handle for different sensors returning different number of floats
-        if isinstance(values, (list, tuple)):
-            for axis_name, value in zip(axes, values):
-                ds[(sensor, axis_name)] = value
-    
-    # Save data to df
-    df.loc[timestamp, cols] = ds.values
+        # Wrap the existing MIDI play callback with recorder
+        original_play = self.midi_player.play
 
-# Input object
-listener = WebsocketServiceListener(sensors, lambda: print('\non_disconnect\n') )
-data = DataStreamer(listener)
+        def recording_play(sample):
+            self._save_sample(sample)
+            original_play(sample)
 
-async def main():
+        self.midi_player.play = recording_play
 
-    await data.stream(save_sample, sample_rate)
+    def _save_sample(self, sample: dict) -> None:
+        """Appends one streamed sample to the in-memory recording buffer."""
+        timestamp = sample.get('timestamp')
+        if timestamp is None:
+            return
 
-    if df.index.empty:
-        print('\nNo sensor data was captured.')
-    else:
-        # Write out to .csv
-        df.to_csv(output_directory + output_filename)
-        print(f'\noutput saved to: {output_directory + output_filename}')
+        row = pd.Series(index=self._record_cols, dtype=float)
+        sensor_data = sample.get('sensors', {})
+        for sensor in self.settings.sensors:
+            values = sensor_data.get(sensor, [])
+            if isinstance(values, (list, tuple)):
+                for axis_name, value in zip(AXES, values):
+                    row[(sensor, axis_name)] = value
 
-    # Rates estimated from recorded data
-    avg_sample_rate = estimate_sample_rate(df)
-    print(f'\nAverage sample rate: {avg_sample_rate} Hz')
-    print(f'Average sample period: {1 / avg_sample_rate} seconds\n')
+        self._recorded.loc[timestamp, self._record_cols] = row.values
 
-asyncio.run(main())
+    def _write_csv(self) -> None:
+        """Saves the recording buffer to .csv at filepath."""
+        if self._recorded.index.empty:
+            print('\nNo sensor data was captured.')
+            return
+
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        out_path = OUTPUT_DIR / OUTPUT_FILENAME
+        self._recorded.to_csv(out_path)
+        print(f'\noutput saved to: {out_path}')
+
+    def _on_close(self):
+        """Save the recording before the normal shutdown sequence."""
+        self._write_csv()
+        super()._on_close()
+
+
+if __name__ == '__main__':
+    app = RecordingApp()
+    app.mainloop()
+
+

@@ -10,7 +10,7 @@
         "SpaceScape",
         "For Aidan"
     ],
-    "default_patch": "Sound Painting",
+    "default_patch": "Flowing Melody",
     "default_device": "SensorServer._websocket._tcp.local.",
     "default_outport": "IAC Driver Bus 1"
 }
