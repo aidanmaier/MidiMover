@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from gui.device_frame import DeviceFrame
-from gui.midi_frame import MidiFrame
+from gui.config_frame import DeviceFrame, MidiFrame
 
 class ConnectionsFrame(ttk.Frame):
     """GUI container for input and output connection configuration."""
@@ -50,7 +49,7 @@ class ConnectionsFrame(ttk.Frame):
         self.seperator_lower = ttk.Separator(self, orient=tk.HORIZONTAL)
         self.seperator_lower.grid(column=0, row=3, columnspan=2, sticky='ew', padx=20, pady=(15, 5))
 
-        # Connection settings TODO
+        # Connection settings
         self.connection_settings_frame = ttk.Frame(self)
         self.connection_settings_frame.grid(column=0, row=3, columnspan=2, padx=(10, 20), pady=10)
 

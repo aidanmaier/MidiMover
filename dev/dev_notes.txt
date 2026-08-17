@@ -14,10 +14,10 @@ Header_frame
 Connection_frame:
 - TODO: remove Connect buttons - set active device to list selection X
 - TODO: wire up set defaults buttons X
+- BUG: empty third column in list trees x
+- BUG: scrollbars not showing x
 
 - TODO: add Settings section below connection lists, with midi control values
-- BUG: empty third column in list trees
-- BUG: scrollbars not showing
 
 Controls_frame:
 - BUG: range sliders clip out of frame right after hide info -> show info X

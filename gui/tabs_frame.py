@@ -5,7 +5,7 @@ from input import WebsocketServiceListener
 from output import MidiOut
 
 class Tabs(ttk.Frame):
-    """ Container for Controls and Connections GUI frames. """
+    """Container for Controls and Connections GUI frames."""
 
     def __init__(self, container, settings, listener: WebsocketServiceListener, midi_out: MidiOut):
         super().__init__(container)
