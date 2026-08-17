@@ -3,24 +3,24 @@
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB.svg)
 ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-FFD43B.svg)
 
-MidiMover is a desktop application for turning motion real-time sensor data into MIDI output. It allows musicians to control instruments using only gestural motion, and the controls can be mapped to fit the performer's personal range of motion.
+MidiMover is a desktop application for turning real-time motion sensor data into MIDI output. It allows musicians to control instruments using only gestural motion, and the controls can be mapped to fit the performer's personal preferred range of motion.
 
-MidiMover discovers compatible [SensorServer](https://github.com/UmerCodez/SensorServer) instances over Zero-configuration networking, reads live orientation and acceleration streams from an Android device, and maps them to MIDI note and CC messages for use with DAWs, virtual instruments, and hardware synthesizers.
+The application discovers compatible [SensorServer](https://github.com/UmerCodez/SensorServer) instances over Zero-configuration networking, reads live orientation and acceleration data from an Android device, and maps them to MIDI note and CC messages for sending to DAWs, virtual instruments, or hardware synthesizers.
 
 
 
 ## Features
 
-MidiMover connects to the Android app SensorServer which exposes sensor data via WebSockets and maps it to MIDI. The application provides:
+MidiMover connects to the free Android app SensorServer, which exposes sensor data via WebSockets, and maps it to MIDI. The application provides:
 
-- automatic discovery of SensorServer instances on the local network
-- Motion parameters: pitch, roll, azimuth and speed can be mapped to notes or common General MIDI controls
-- configurable MIDI mappings with input ranges, output ranges, inversion, and linear/exponential curves
-- note quantization to a selectable musical scale and root note
+- Automatic discovery of SensorServer instances on the local network.
+- Free mapping from motion parameters (tilt, twist turn and speed) to MIDI notes and common MIDI CC messages.
+- Configurable MIDI mappings with input ranges, output ranges, inversion, and linear/exponential curves.
+- Note quantization to a range of musical scales and root notes.
 
 ## Project layout
 
-- `app.py` — application entry point and Tkinter window lifecycle
+- `app.py` — application entry point and Tkinter main GUI loop
 - `input.py` — WebSocket discovery and sensor streaming logic
 - `output.py` — MIDI mapping, note quantization, and MIDI message sending
 - `settings.py` — shared settings across the application
@@ -35,10 +35,12 @@ MidiMover connects to the Android app SensorServer which exposes sensor data via
 - Python 3.10 or newer
 - A compatible Android device running the SensorServer app
 - A MIDI output available on your machine, such as:
-  - macOS: IAC Driver Bus
-  - Windows: loopMIDI or another virtual MIDI driver
+  - macOS: IAC Driver Bus (bundled with macOS)
+  - Windows: [loopMIDI](https://www.tobias-erichsen.de/software/loopmidi.html) or another virtual MIDI driver
 - A MIDI-compatible DAW or digital instrument available on your machine
 - Access to the same local network as the Android device (can run on mobile hotspot)
+
+### Installation
 
 ### Run the app
 
@@ -46,18 +48,19 @@ MidiMover connects to the Android app SensorServer which exposes sensor data via
 python app.py
 ```
 
-The GUI will open with a connection panel and control mapping interface. From there you can configure the input device, MIDI output port, and live motion mappings.
+The GUI will open with a connection panel and control mapping interface. From there you can configure the input device, MIDI output port, and control mappings.
 
 ## Recommended quick set-up using BandLab
 
-1. Install and start the Android SensorServer app on your device. [https://f-droid.org/packages/github.umer0586.sensorserver/]
+1. Install and start the Android [SensorServer](https://f-droid.org/packages/github.umer0586.sensorserver/) app on your device. 
 2. Ensure the phone and the computer are on the same network.
-3. Launch MidiMover and select SensorServer and your chosen MIDI ouput (Connections panel).
-4. Open BandLab online studio [https://help.bandlab.com/hc/en-us/articles/115002945153-Getting-Started-with-the-BandLab-Studio] and allow access to your MIDI devices (pop-up).
+3. Launch MidiMover and connect SensorServer and IAC Driver/loopMIDI in the Connections panel.
+4. [Open BandLab online studio](https://help.bandlab.com/hc/en-us/articles/115002945153-Getting-Started-with-the-BandLab-Studio) and allow access to your MIDI devices (pop-up).
 5. Load a virtual instrument in the BandLab studio (recommended: Percussion > Marimba).
-6. Set IAC Driver/loopMIDI as your MIDI device in BandLab [https://help.bandlab.com/hc/en-us/articles/58150962949785-Connecting-MIDI-Devices].
-7. Try playing the virtual keyboard inside GarageBand to check your audio connection [https://help.bandlab.com/hc/en-us/articles/56922726115097-Audio-Output-Issues].
-8. Start MidiMover and try moving the controller to control the audio output.
+6. Set IAC Driver/loopMIDI as your [MIDI device in BandLab](https://help.bandlab.com/hc/en-us/articles/58150962949785-Connecting-MIDI-Devices).
+7. Try playing the virtual keyboard inside BandLab to [check your audio connection](https://help.bandlab.com/hc/en-us/articles/56922726115097-Audio-Output-Issues).
+8. Hold your controller (mobile device) in a neutral mid-range position and press Center Controls in MidiMover.
+9. In MidiMover, press PLAY and try moving the controller (mobile device) to control the audio output.
 
 
 ## Resources
@@ -68,8 +71,4 @@ The GUI will open with a connection panel and control mapping interface. From th
 - loopMIDI driver for Windows users: https://www.tobias-erichsen.de/software/loopmidi.html
 - BandLab free browser-based DAW: https://www.bandlab.com/
 
-
-## License
-
-This project is intended for use under the project’s repository license. See the repository metadata for the current license declaration.
 
