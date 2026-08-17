@@ -80,6 +80,8 @@ SCALE_PATTERNS = {
     'Harmonic Minor': [0, 2, 3, 5, 7, 8, 11],
     'Major Pentatonic': [0, 2, 4, 7, 9],
     'Minor Pentatonic': [0, 3, 5, 7, 10],
+    'Major 7th Chord': [0, 4, 7, 11],
+    'Minor 7th Chord': [0, 3, 7, 10],
     # 'Pelog': [],
     # 'Sorog': [],
 }
@@ -87,10 +89,12 @@ SCALE_PATTERNS = {
 # Default MIDI CC controls
 CONTROL_CODES = {
     'Volume': 7, # master volume/output
+    'Mod': 1, # mod wheel, usually used for vibrato
     'Filt Res': 71, # filter resonance
     'Filt Cut': 74, # filter cutoff
     'Attack': 73, # volume envelope attack
     'Release': 72, # volume envelope release
+    'Reverb': 91,
     'User 1': 85, # custom user parameter 1
     'User 2': 86, # custom user parameter 2
     'User 3': 89, # custom user parameter 3
@@ -156,6 +160,9 @@ class Settings:
         self.running_status = tk.BooleanVar(value=False)
         self.selected_input = tk.StringVar(value='')
         self.selected_output = tk.StringVar(value='')
+
+        self.user_north_offset = tk.DoubleVar(value=0.0) # Re-Center button resets "North" base on current orientation
+        self.latest_azimuth = tk.DoubleVar(value=0.0) # azimuth tracker
 
         self.input_connection = tk.StringVar(value='')
         self.input_connection_name = tk.StringVar(value=self.input_disconnected_label)

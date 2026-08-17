@@ -7,14 +7,15 @@
     "input_disconnected_label": "< Connect Device >",
     "output_disconnected_label": "< Connect MIDI Port >",
     "default_sample_rate": 50,
-    "default_patch": "Spooky",
+    "default_patch": "Sound Painting",
     "saved_patches_list": [
         "< new instrument >",
         "Filter",
         "SpaceScape",
-        "Sound Drawing",
-        "Spooky",
-        "Little Lamb"
+        "Sound Painting",
+        "Flowing Melody",
+        "Little Lamb",
+        "Lewys"
     ],
     "default_device": "SensorServer._websocket._tcp.local.",
     "default_outport": "IAC Driver Bus 1"

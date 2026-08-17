@@ -20,7 +20,6 @@ class ControlsFrame(ttk.Frame):
 
         self.loaded_patch_name: tk.StringVar = self.settings.loaded_patch_name
         self.loaded_patch_description: tk.StringVar = self.settings.loaded_patch_description
-        # self.settings.loaded_patch_parameters_data: dict = self.settings.settings.loaded_patch_parameters_data
 
         self.active_scale: tk.StringVar = self.settings.active_scale
         self.active_root_note: tk.IntVar = self.settings.active_root_note
@@ -29,6 +28,9 @@ class ControlsFrame(ttk.Frame):
         self.running_status: tk.BooleanVar = self.settings.running_status
         self.active_midi_channel: tk.IntVar = self.settings.active_midi_channel
         self.lock_var: tk.BooleanVar = self.settings.controls_lock
+
+        self.user_north_offset: tk.DoubleVar = self.settings.user_north_offset
+        self.latest_azimuth: tk.DoubleVar = self.settings.latest_azimuth
 
         # Local constants
         self.name = 'Controls'
@@ -173,7 +175,7 @@ class ControlsFrame(ttk.Frame):
         self.footer_frame.grid(column=0, columnspan=3, row=6,  sticky='ew')
 
         # Re-center button
-        self.recenter_button = ttk.Button(self.footer_frame, text='Re-Center', width=20)
+        self.recenter_button = ttk.Button(self.footer_frame, text='Re-Center', width=20, command=self._on_recenter_button)
         self.recenter_button.grid(column=0, row=0, **self.options)
 
         # Musical scale settings
@@ -756,12 +758,8 @@ class ControlsFrame(ttk.Frame):
             # User typing
             pass
 
-    def _on_recenter_button(self) -> None:
-        """Flips recenter button state."""
-        pass
-
     def _update_lock_state(self) -> None:
-        """Locks/unlocks patch controls and refreshes lock button style."""
+        """Locks/unlocks all patch controls and refreshes lock button style."""
         locked = self.lock_var.get()
 
         if locked:
@@ -772,16 +770,14 @@ class ControlsFrame(ttk.Frame):
         combobox_state = 'disabled' if locked else 'readonly'
         other_state = 'disabled' if locked else 'normal'
 
-        # Scale / root note selectors
+        # Scale and root note selectors
         self.root_var_selector.config(state=combobox_state)
         self.scale_var_selector.config(state=combobox_state)
 
         # Recenter button
         self.recenter_button.config(state=other_state)
 
-        # Patch action buttons: forcibly disable while locked; defer to their own
-        # existing rules (patch_altered / default-patch checks) once unlocked, so
-        # unlocking doesn't wrongly re-enable a button that should stay disabled.
+        # Patch action buttons
         if locked:
             self.save_patch_button.config(state='disabled')
             self.reset_patch_button.config(state='disabled')
@@ -790,7 +786,7 @@ class ControlsFrame(ttk.Frame):
             self._update_patch_button_states()
             self._update_default_patch_button()
 
-        # MIDI channel selector: same deferral pattern (respects running_status)
+        # MIDI channel selector
         if locked:
             self.channel_selector.config(state='disabled')
         else:
@@ -810,8 +806,6 @@ class ControlsFrame(ttk.Frame):
                 widgets['mapping_button'].configure(state='disabled')
                 widgets['invert_button'].configure(state='disabled')
             else:
-                # Defer to existing logic, which only enables a slider/button
-                # if its paired combobox actually has a value selected.
                 self._update_slider_states(index)
 
     def _on_lock_button(self) -> None:
@@ -821,5 +815,6 @@ class ControlsFrame(ttk.Frame):
         self.lock_var.set(new_state)
         self._update_lock_state()
 
-
-        
+    def _on_recenter_button(self) -> None:
+        """Sets current yaw reading as new user 'North'."""
+        self.user_north_offset.set(self.latest_azimuth.get())

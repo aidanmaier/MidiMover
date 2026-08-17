@@ -1,11 +1,12 @@
+import math
 import mido
 import asyncio
 import queue
 import numpy as np
 import tkinter as tk
+from scipy.spatial.transform import Rotation
 from typing import Any
 from settings import Settings, SCALE_PATTERNS, NOTE_NAMES
-from signal_processing import calculate_magnitude
 
 class Scale():
     def __init__(self, root: int, scale_type: str) -> None:
@@ -38,6 +39,32 @@ def midi_to_signed_pitch(midi_val: int) -> str:
     octave = midi_val // 12
     return f'{pitch}{octave}'
 
+def rotation_vector_to_orientation(vector: list[float]) -> list[float]:
+    """Converts rotation vector quaternion to orientation around Pitch (X), Roll (Y), and Azimuth (Z) axes."""
+    x, y, z = vector[0], vector[1], vector[2]
+
+    # Calculate w if missing
+    w = vector[3] if len(vector) >= 4 else np.sqrt(max(0.0, 1.0 - (x**2 + y**2 + z**2)))
+
+    # SciPy rotation matrix, quaternion format [x, y, z, w]
+    r_matrix = Rotation.from_quat([x, y, z, w]).as_matrix()
+
+    # Calculate raw Euler angles in degrees 
+    pitch_deg   = np.degrees(np.arcsin(-r_matrix[2, 1])) # [-90, 90]
+    roll_deg    = np.degrees(np.arctan2(-r_matrix[2, 0], r_matrix[2, 2])) # [-180, 180]
+    azimuth_deg = np.degrees(np.arctan2(r_matrix[0, 1], r_matrix[1, 1])) # [-180, 180]
+
+    # Normalize to [-1.0, 1.0]
+    pitch_norm   = -pitch_deg / 90.0 # invert so up = high
+    roll_norm    = roll_deg / 180.0
+    azimuth_norm = azimuth_deg / 180.0
+
+    return [
+        float(pitch_norm),
+        float(roll_norm),
+        float(azimuth_norm)
+    ]
+
 def midi_map(
         value: float, 
         input_range: tuple[float, float], 
@@ -50,7 +77,7 @@ def midi_map(
     Parameters: 
     input_range [floor, ceiling]
     output_range [floor, ceiling]: in midi range [0..127]
-    invert: flips the mapping
+    invert: flips the output mapping
     exponential: changes mapping curve from linear to exponential
     """
     in_min, in_max = input_range[0], input_range[1]
@@ -92,8 +119,9 @@ class MidiOut():
         # Pointers to global settings
         self.settings = settings
         self.control_codes = settings.control_codes
+
+        self._port_lock = settings.midi_port_lock # MIDI outport thread RLock
         self.active_midi_channel = settings.active_midi_channel
-        self._port_lock = settings.midi_port_lock
 
         # Track MIDI channel changes
         self.active_midi_channel.trace_add('write', self._update_channel)
@@ -204,10 +232,26 @@ class MidiOut():
 
             self.all_notes_off()
 
-            # Reset standard CC channels to neutral mid position
-            for param_name in self.control_codes.keys():
-                self.reset_param(param_name, active_note=None)
+            # Reset active control channels to neutral mid position
+            for param in self.settings.loaded_patch_parameters_data.values():
+                self.reset_param(param['output'], active_note=None)
 
+
+def calculate_magnitude(vector: list[float]) -> float:
+    """
+    Calculates the magnitude of a 3-digit vector.
+
+    Parameters:
+    vector (list): [x, y, z]
+
+    Returns:
+    float: vector magnitude
+    """
+    
+    # Calculate hypotenuse from vector
+    x, y, z = vector
+
+    return math.hypot(x, y, z)
 
 class MidiPlayer:
     def __init__(self, settings: Settings, midi_out: MidiOut) -> None:
@@ -217,6 +261,9 @@ class MidiPlayer:
         self.midi_out = midi_out
         self.active_scale: tk.StringVar = self.settings.active_scale
         self.active_root_note: tk.IntVar = self.settings.active_root_note
+
+        self.user_north_offset: tk.DoubleVar = settings.user_north_offset
+        self.latest_azimuth: tk.DoubleVar = self.settings.latest_azimuth
 
         # Track midi note_value [0..127]
         self.previous_note = tk.IntVar(value=0)
@@ -231,25 +278,32 @@ class MidiPlayer:
         self.settings.active_scale.trace_add('write', self._update_active_scale_object)
         self.settings.active_root_note.trace_add('write', self._update_active_scale_object)
         self.settings.active_root_name.trace_add('write', self._update_active_scale_object)
-        
+
     def play(self, sample: dict[str, Any]) -> None:
         """Processes sensor data samples and sends them to the thread-safe queue."""
         # Raw sensor data
-        acceleration: list[float] = sample['sensors']['linear_acceleration']
-        rotation: list[float] = sample['sensors']['rotation_vector']
+        raw_acceleration: list[float] = sample['sensors']['linear_acceleration']
+        raw_rotation: list[float] = sample['sensors']['rotation_vector']
 
         # Guard for missing values
-        if len(rotation) < 3 or not acceleration:
+        if len(raw_rotation) < 3 or not raw_acceleration:
             return 
 
         # Processed input parameters
-        pitch, roll, yaw = rotation[:3] # rotation around x, y, z axes
-        magnitude = calculate_magnitude(acceleration) # sum of accel in any direction
+        pitch, roll, azimuth = rotation_vector_to_orientation(raw_rotation) # rotation around x, y, z axes
+        magnitude = calculate_magnitude(raw_acceleration) # sum of accel in any direction
+
+        # Update azimuth tracker for Re-Center button
+        self.latest_azimuth.set(azimuth)
+
+        # Calculate user 'North' heading from offset
+        delta = azimuth - self.user_north_offset.get()
+        heading = (delta + 1) % 2 - 1  # normalize to [-1.0, 1.0]
 
         # Map UI input parameters to sensor parameters
         input_values = {
             "Speed" : magnitude,
-            "Turn" : yaw,
+            "Turn" : heading,
             "Tilt" : pitch,
             "Twist" : roll, 
         }
@@ -321,7 +375,7 @@ class MidiPlayer:
                     continue
 
                 for param, value in mapped_vals.items():
-                    if value:
+                    if value is not None:
                         if param == 'Note':
                             # Schedule MIDI note playback without blocking the queue processor.
                             asyncio.create_task(self.midi_out.perc(value))

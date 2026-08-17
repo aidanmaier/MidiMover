@@ -1,7 +1,8 @@
 TO DO:
-- BUG: handle unexpected MIDI device/port disconnect while running
+- BUG: handle unexpected MIDI device/port disconnect while running X
+- BUG: overlap between pitch and roll sensors X
+
 - BUG: handle unexpected network disconnect while running
-- BUG: overlap between pitch and roll sensors ???
 
 Header_frame
 - BUG: disable patch selection while running x
@@ -14,12 +15,9 @@ Connection_frame:
 - TODO: remove Connect buttons - set active device to list selection X
 - TODO: wire up set defaults buttons X
 
-- TODO: add WS port column to differentiate between multiple SensorServer instances on different devices
-- TODO: add Settings section below connection lists, with midi channel and control values
-- BUG?: restrict MIDI ports list to outputs only
+- TODO: add Settings section below connection lists, with midi control values
 - BUG: empty third column in list trees
 - BUG: scrollbars not showing
-
 
 Controls_frame:
 - BUG: range sliders clip out of frame right after hide info -> show info X
@@ -29,19 +27,23 @@ Controls_frame:
 - TODO: midi channel selector X
 - BUG: change slider bounds if input changed to Speed X
 
-- BUG: constrain channel_selector keyboard input
-- BUG: update to letters when changing parameter to Note 
-- BUG: fix patch reset
-
-- TODO: add Undo Changes button to reset patch to last save state
-- TODO: widget to visualise current IO parameter values in range
+- BUG: fix patch reset - change to Reload button to reset patch to last save state
+- TODO: add Clear all button to clear all parameters
 
 Ouput:
 - TODO: Snap to nearest output note to avoid holes between notes X
 - TODO: change parameter exclusivity so a single motion param can map to many midi params but not vice versa X
 - BUG: on stop, midi device left hanging so all notes sustain when restarted X
-- TODO: send parameter reset message when on parameter change so nothing left stuck on 0 e.g. vol or filt_cut x
+- TODO: send parameter reset message when on parameter change so nothing left stuck on 0 e.g. vol or filt_cut X
 - BUG: 'Speed' not mapping to output range X
+
+
+Future fixes:
+- BUG: constrain channel_selector keyboard input
+- BUG: update to letters when changing parameter to Note 
+- TODO: widget to visualise current IO parameter values in range
+- TODO: add WS port column to differentiate between multiple SensorServer instances on different devices
+
 
 ERROR:
 
