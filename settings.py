@@ -4,14 +4,10 @@ import json
 from pathlib import Path
 from threading import RLock
 
-
 # Hardcoded backup defaults, immutable from within app
 FACTORY_SETTINGS = {
-    "ws_address" : "_websocket._tcp.local.",
-    "sensors" : ["rotation_vector", "linear_acceleration"],
-    "input_disconnected_label" : "< Connect Device >",
-    "output_disconnected_label" : "< Connect MIDI Port >",
     "default_sample_rate" : 50,
+    "default_midi_channel": 0,
     "default_patch" : "",
     "default_device" : "SensorServer._websocket._tcp.local.",
     "default_outport" : "IAC Driver Bus 1"
@@ -82,8 +78,6 @@ SCALE_PATTERNS = {
     'Minor Pentatonic': [0, 3, 5, 7, 10],
     'Major 7th Chord': [0, 4, 7, 11],
     'Minor 7th Chord': [0, 3, 7, 10],
-    # 'Pelog': [],
-    # 'Sorog': [],
 }
 
 # Default MIDI CC controls
@@ -94,7 +88,8 @@ CONTROL_CODES = {
     'Filt Cut': 74, # filter cutoff
     'Attack': 73, # volume envelope attack
     'Release': 72, # volume envelope release
-    'Reverb': 91,
+    'Reverb': 91, # reverb level
+    'Glide': 84, # portamento amount
     'User 1': 85, # custom user parameter 1
     'User 2': 86, # custom user parameter 2
     'User 3': 89, # custom user parameter 3
@@ -105,7 +100,6 @@ CONTROL_CODES = {
 class Settings:
     """Shared config for global settings."""
     # Settings object passed to all gui components so all variables are settable locally
-    # tk variables refire when updated
     def __init__(self, settings_filepath: Path, patches_filepath: Path):
 
         # Constants
@@ -114,6 +108,18 @@ class Settings:
         self.note_names = NOTE_NAMES
         self.scale_patterns = SCALE_PATTERNS
         self.control_codes = CONTROL_CODES
+        self.ws_address = '_websocket._tcp.local.'
+        self.sensors = ['rotation_vector', 'linear_acceleration']
+        self.input_disconnected_label = '< Connect Device >'
+        self.output_disconnected_label = '< Connect MIDI Port >'
+        self.input_parameter_types = [
+            '', # blank parameter = no input
+            'Speed', 
+            'Tilt', 
+            'Turn', 
+            'Twist', 
+            ]
+        self.output_parameter_types = ['', 'Note'] + [p for p in self.control_codes.keys()]
 
         # Guards access to MidiOutput._outport across threads to avoid PyEval_RestoreThread GIL assertion bug
         self.midi_port_lock = RLock() # re-entrant lock can be acquired multiple times by the same thread
@@ -124,24 +130,10 @@ class Settings:
         self.saved_patches_data = self._load_patches()
         p = self.saved_patches_data
 
-        # Immutable app settings
-        self.input_parameter_types = [
-            '', # blank parameter = no input
-            'Speed', 
-            'Tilt', 
-            'Turn', 
-            'Twist', 
-            ]
-        self.output_parameter_types = ['', 'Note'] + [p for p in CONTROL_CODES.keys()]
-
-        self.ws_address: str = FACTORY_SETTINGS['ws_address']
-        self.sensors: list[str] = FACTORY_SETTINGS['sensors']
-        self.input_disconnected_label: str = FACTORY_SETTINGS['input_disconnected_label']
-        self.output_disconnected_label: str = FACTORY_SETTINGS['output_disconnected_label']
-
         # User settings, load factory setting if missing
+        # tk variables refire when updated
         self.default_sample_rate: int = s.get('default_sample_rate', FACTORY_SETTINGS['default_sample_rate'])
-        self.default_midi_channel: int = 0 # TODO: wire into settings.json
+        self.default_midi_channel: int = s.get('default_midi_channel', FACTORY_SETTINGS['default_midi_channel'])
         self.default_patch = tk.StringVar(value=s.get('default_patch', FACTORY_SETTINGS['default_patch']))
         self.default_device = tk.StringVar(value=s.get('default_device', FACTORY_SETTINGS['default_device']))
         self.default_outport = tk.StringVar(value=s.get('default_outport', FACTORY_SETTINGS['default_outport']))
@@ -207,13 +199,10 @@ class Settings:
     def _save_current_settings(self) -> None:
         """Writes current settings to disk and saved_settings variable."""
         data = {
-            "ws_address": self.ws_address,
-            "sensors": self.sensors,
-            "input_disconnected_label": self.input_disconnected_label,
-            "output_disconnected_label": self.output_disconnected_label,
             "default_sample_rate": self.default_sample_rate,
-            "default_patch": self.default_patch.get(),
+            "default_midi_channel": self.default_midi_channel,
             "saved_patches_list": self.saved_patches_list,
+            "default_patch": self.default_patch,
             "default_device": self.default_device.get(),
             "default_outport": self.default_outport.get()
         }

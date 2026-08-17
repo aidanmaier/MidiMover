@@ -1,11 +1,20 @@
 import tkinter as tk
 from tkinter import ttk
+from settings import Settings
+from input import WebsocketServiceListener
+from output import MidiOut
 from gui.config_frame import DeviceFrame, MidiFrame
 
 class ConnectionsFrame(ttk.Frame):
     """GUI container for input and output connection configuration."""
 
-    def __init__(self, container, settings, listener, midi_out):
+    def __init__(
+            self,
+            container, 
+            settings: Settings, 
+            listener: WebsocketServiceListener, 
+            midi_out: MidiOut
+        ):
         super().__init__(container)
 
         # Pointers to global settings
@@ -16,6 +25,7 @@ class ConnectionsFrame(ttk.Frame):
 
         # Local constants
         self.name = 'Connections'
+        self.options = {'sticky':'w', 'padx':10, 'pady':(10, 5)} # widgit placement options
         self.listener = listener
         self.midi_out = midi_out
 
@@ -49,19 +59,23 @@ class ConnectionsFrame(ttk.Frame):
         self.seperator_lower = ttk.Separator(self, orient=tk.HORIZONTAL)
         self.seperator_lower.grid(column=0, row=3, columnspan=2, sticky='ew', padx=20, pady=(15, 5))
 
-        # Connection settings
-        self.connection_settings_frame = ttk.Frame(self)
-        self.connection_settings_frame.grid(column=0, row=3, columnspan=2, padx=(10, 20), pady=10)
+        # List CC parameter numbers
+        self.cc_frame = ttk.Frame(self)
+        self.cc_frame.grid(column=0, row=4, columnspan=2, padx=(10, 20), pady=10)
 
-        # self.reset_button = ttk.Button(self.connection_settings_frame, text='Reset All', command=self._reset_settings)
-        # self.reset_button.pack(side='right', padx=10)
-        
-        # self.sample_rate_label = ttk.Label(self.connection_settings_frame, text='Sample Rate:')
-        # self.sample_rate_label.pack(side='left')
-        # self.sample_rate_spinbox = ttk.Spinbox(self.connection_settings_frame)
-        # self.sample_rate_spinbox.pack(side='left', fill='none')
-        # self.hz_label = ttk.Label(self.connection_settings_frame, text='Sample Rate:')
-        # self.hz_label.pack(side='left')
+        self.cc_title = ttk.Label(self.cc_frame, text='MIDI CC Parameter Numbers:')
+        self.cc_title.grid(column=0, row=0, **self.options)
+
+        col_id, row_id = 1, 0
+        for control, code in self.settings.control_codes.items():
+            cc_label = ttk.Label(self.cc_frame, text=f'{control}: {code}')
+            cc_label.grid(column=col_id, row= row_id, **self.options)
+
+            if row_id < 3:
+                row_id += 1
+            else:
+                col_id += 1
+                row_id = 0
 
     def _update_connections_settings_state(self, *args):
         """Disables connectinos settings controls if running."""

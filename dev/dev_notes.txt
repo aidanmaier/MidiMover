@@ -2,8 +2,6 @@ TO DO:
 - BUG: handle unexpected MIDI device/port disconnect while running X
 - BUG: overlap between pitch and roll sensors X
 
-- BUG: handle unexpected network disconnect while running
-
 Header_frame
 - BUG: disable patch selection while running x
 - TODO: Fix Patch Menu behaviour and add colours (blue=selected, green=loaded) X
@@ -16,8 +14,7 @@ Connection_frame:
 - TODO: wire up set defaults buttons X
 - BUG: empty third column in list trees x
 - BUG: scrollbars not showing x
-
-- TODO: add Settings section below connection lists, with midi control values
+- TODO: add Settings section below connection lists, with midi control values X
 
 Controls_frame:
 - BUG: range sliders clip out of frame right after hide info -> show info X
@@ -39,10 +36,13 @@ Ouput:
 
 
 Future fixes:
+- TODO: implement Save As with settable patch name and description
+- BUG: handle unexpected network disconnect while running
 - BUG: constrain channel_selector keyboard input
 - BUG: update to letters when changing parameter to Note 
 - TODO: widget to visualise current IO parameter values in range
 - TODO: add WS port column to differentiate between multiple SensorServer instances on different devices
+- TODO: settable User MIDI CC parameters
 
 
 ERROR:

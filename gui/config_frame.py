@@ -89,7 +89,7 @@ class ConfigFrame(ttk.Frame):
             self, 
             columns=('device','status'), 
             show='headings', 
-            height=6, 
+            height=10, 
             selectmode='browse'
             )
         self.devices_list.heading('device', text=f'{self.device_type} Name', anchor='w')
