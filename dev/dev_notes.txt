@@ -26,9 +26,9 @@ Controls_frame:
 - TODO: focus parameter selector menus to first item, not last X
 - TODO: midi channel selector X
 - BUG: change slider bounds if input changed to Speed X
-
-- BUG: fix patch reset - change to Reload button to reset patch to last save state
-- TODO: add Clear all button to clear all parameters
+- TODO: rename Re-Center to Center Inputs X
+- TODO: add Clear All button to clear all parameters X
+- BUG: fix patch reset - change to Reload button to reset patch to last save state X
 
 Ouput:
 - TODO: Snap to nearest output note to avoid holes between notes X

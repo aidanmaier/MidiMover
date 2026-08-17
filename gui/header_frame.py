@@ -103,7 +103,7 @@ class Header(ttk.Frame):
 
         self.status_icon = tk.Canvas(self.ready_frame, width=14, height=14, highlightthickness=0)
         self.status_icon_id = self.status_icon.create_oval(2, 2, 12, 12, fill='red', outline='')
-        self.status_icon.grid(column=0, row=0, stick='w', padx=10, pady=(10, 5))
+        self.status_icon.grid(column=0, row=0, sticky='w', padx=10, pady=(10, 5))
 
         self.ready_label = ttk.Label(self.ready_frame, textvariable=self.ready_state)
         self.ready_label.grid(column=1, row=0, sticky='w', padx=(0, 10), pady=(10, 5))
@@ -257,18 +257,20 @@ class Header(ttk.Frame):
         else:
             self.patch_menu.config(state='normal')
 
-    def _load_patch(self, patch_name: str) -> None:
+    def _load_patch(self, patch_name: str, force: bool = False) -> None:
         """Loads the specified patch."""
 
         # Patch already active
-        if patch_name == self.loaded_patch_name.get():
+        if not force and patch_name == self.loaded_patch_name.get():
             return
 
         # Strip ' (default)' tag to match dictionary keys in saved_patches_data
         clean_patch_name = patch_name.replace(' (default)', '')
 
-        # Fetch patch data safely
+        # Load patches data from patches.json
+        self.settings._reload_patches()
         patches_data = getattr(self.settings, 'saved_patches_data', {}).get('patches', {})
+
         if clean_patch_name in patches_data:
             selected_patch_data = patches_data[clean_patch_name]
 
@@ -288,7 +290,6 @@ class Header(ttk.Frame):
         """Loads the patch selected in the patch menu."""
         patch_name = self.patch_var.get()
         self._load_patch(patch_name=patch_name)
-
 
     def _update_tabs_buttons(self, active_tab: str | None) -> None:
         """Highlights the button of the active tab and hides the other."""

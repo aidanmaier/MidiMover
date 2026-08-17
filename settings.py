@@ -239,6 +239,14 @@ class Settings:
             with open(self.patches_filepath, 'r') as INFILE:
                 return json.load(INFILE)
 
+    def _reload_patches(self) -> dict:
+        """Reloads patch data from patches.json."""
+        self.saved_patches_data = self._load_patches()
+        self.saved_patches_list = list(
+            self.saved_patches_data.get('patches', {}).keys()
+        )
+        return self.saved_patches_data
+
     def _write_default_device(self, *args):
         """Writes new default device to settings.json."""
         self.saved_settings["default_device"] = self.default_device.get()

@@ -113,15 +113,15 @@
                     "invert": false
                 },
                 "3": {
-                    "input": "Speed",
+                    "input": "Twist",
                     "input_range": [
-                        0.0,
-                        100.0
+                        -0.36,
+                        0.4
                     ],
-                    "output": "Volume",
+                    "output": "Reverb",
                     "output_range": [
-                        0,
-                        127
+                        29,
+                        89
                     ],
                     "mapping": false,
                     "invert": false

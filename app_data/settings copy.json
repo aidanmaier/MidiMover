@@ -10,12 +10,12 @@
     "default_patch": "Sound Painting",
     "saved_patches_list": [
         "< new instrument >",
+        "Filter",
+        "SpaceScape",
         "Sound Painting",
         "Flowing Melody",
         "Little Lamb",
-        "Filter",
-        "SpaceScape",
-        "For Aidan"
+        "Lewys"
     ],
     "default_device": "SensorServer._websocket._tcp.local.",
     "default_outport": "IAC Driver Bus 1"

@@ -383,7 +383,8 @@ class MidiPlayer:
                             # Send midi CC messages immediately.
                             self.midi_out.cc(param, value)
 
-                print(mapped_vals) #DEBUG
+                # Visualise MIDI output values in terminal
+                print(mapped_vals)
                             
             except queue.Empty:
                 break

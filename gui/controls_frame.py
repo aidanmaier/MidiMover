@@ -89,28 +89,39 @@ class ControlsFrame(ttk.Frame):
         self.patch_name_frame.grid(column=0, row=0, columnspan=2, **self.options)
         self.patch_name_label = ttk.Label(self.patch_name_frame, text='Instrument:', width=10)
         self.patch_name_label.pack(side='left')
-        self.patch_name = ttk.Label(self.patch_name_frame, textvariable=self.cleaned_loaded_patch_name)
+        self.patch_name = ttk.Label(self.patch_name_frame, textvariable=self.cleaned_loaded_patch_name, width=20)
         self.patch_name.pack(side='left')
 
-        # Save/Reset/Set Default buttons
+        # Save/Save As/Reload/Set Default buttons
         self.patch_button_frame = ttk.Frame(self)
         self.patch_button_frame.grid(column=2, columnspan=2, row=0, sticky='ew', padx=10)
 
         self.save_patch_button = ttk.Button(
             self.patch_button_frame, 
+            width=6,
             text='Save', 
             state='disabled', 
             command=self._on_save_patch_button
             )
         self.save_patch_button.grid(column=0, row=0, sticky='w', padx=5, pady=(10, 5))
 
-        self.reset_patch_button = ttk.Button(
+        self.save_as_button = ttk.Button(
             self.patch_button_frame, 
-            text='Reset', 
+            width=6,
+            text='Save As', 
             state='disabled', 
-            command=self._on_reset_patch_button
+            command=self._on_save_as_button
             )
-        self.reset_patch_button.grid(column=1, row=0, sticky='ew', padx=(0, 5), pady=(10, 5))
+        self.save_as_button.grid(column=1, row=0, sticky='w', padx=(0, 5), pady=(10, 5))
+
+        self.reload_patch_button = ttk.Button(
+            self.patch_button_frame, 
+            width=6,
+            text='Reload', 
+            state='disabled', 
+            command=self._on_reload_patch_button
+            )
+        self.reload_patch_button.grid(column=2, row=0, sticky='ew', padx=(0, 5), pady=(10, 5))
 
         self.default_patch_button = ttk.Button(
             self.patch_button_frame, 
@@ -118,7 +129,7 @@ class ControlsFrame(ttk.Frame):
             state='normal',
             command=self._on_default_patch_button
             )
-        self.default_patch_button.grid(column=2, row=0, sticky='e', padx=0, pady=(10, 5))
+        self.default_patch_button.grid(column=3, row=0, sticky='e', padx=0, pady=(10, 5))
 
         # Patch description
         self.patch_description_frame = ttk.Frame(self)
@@ -174,8 +185,8 @@ class ControlsFrame(ttk.Frame):
         self.footer_frame = ttk.Frame(self)
         self.footer_frame.grid(column=0, columnspan=3, row=6,  sticky='ew')
 
-        # Re-center button
-        self.recenter_button = ttk.Button(self.footer_frame, text='Re-Center', width=20, command=self._on_recenter_button)
+        # Re-center inputs button
+        self.recenter_button = ttk.Button(self.footer_frame, text='Center Inputs', width=20, command=self._on_recenter_button)
         self.recenter_button.grid(column=0, row=0, **self.options)
 
         # Musical scale settings
@@ -209,16 +220,15 @@ class ControlsFrame(ttk.Frame):
         )
         self.scale_var_selector.grid(column=3, row=0, **self.options)
 
-        # lock button
-        self.lock_button = ttk.Button(
+        # clear all parameters button
+        self.clear_all_button = ttk.Button(
             self.footer_frame, 
-            text='Lock', 
-            style='Active.TButton' if self.lock_var.get() else 'Default.TButton',
+            text='Clear All', 
             width=11,
-            command=self._on_lock_button,
+            command=self._on_clear_all_button,
             state='normal',
         )
-        self.lock_button.grid(column=2, row=0, **self.options)
+        self.clear_all_button.grid(column=2, row=0, **self.options)
 
     def _build_parameter_controls(self, index: int) -> None:
         """Builds input/output parameter mapping controls."""
@@ -570,17 +580,18 @@ class ControlsFrame(ttk.Frame):
 
         # Populate dropdown values 
         self._refresh_available_types()
-        self._update_lock_state()
         self.patch_altered.set(False)
         
     def _update_patch_button_states(self, *args) -> None:
         """Disables save patch button if no changes have been made."""
         if self.patch_altered.get():
             self.save_patch_button.config(state='normal')
-            self.reset_patch_button.config(state='normal')
+            self.save_as_button.config(state='normal')
+            self.reload_patch_button.config(state='normal')
         else:
             self.save_patch_button.config(state='disabled')
-            self.reset_patch_button.config(state='disabled')
+            self.save_as_button.config(state='disabled')
+            self.reload_patch_button.config(state='disabled')
 
     def _update_default_patch_button(self, *args) -> None:
         """Disables Set Default if default patch already loaded."""
@@ -642,9 +653,20 @@ class ControlsFrame(ttk.Frame):
         self.settings._save_current_settings()
         self.patch_altered.set(False)
 
-    def _on_reset_patch_button(self) -> None:
-        """Reloads current patch from patch.json."""
-        self.master.master.header._load_patch(self.loaded_patch_name.get()) # type: ignore
+    def _on_save_as_button(self) -> None:
+        """Opens save new patch dialog window."""
+        # Save global settings
+        self.settings._save_current_settings()
+        self.patch_altered.set(False)
+
+    def _on_reload_patch_button(self) -> None:
+        """Reloads current patch from last save state."""
+        current_patch_name = self.cleaned_loaded_patch_name.get()
+        header_frame = getattr(self.master.master, 'header', None)
+
+        if header_frame:
+            header_frame._load_patch(current_patch_name, force=True)
+
         self._update_parameter_list()
 
     def _on_default_patch_button(self) -> None:
@@ -665,9 +687,9 @@ class ControlsFrame(ttk.Frame):
         (in_var, _), (out_var, _) = self.parameter_selector_widgets[index]
         widgets = self.parameter_slider_widgets[index]
         in_slider = widgets['input_slider']
-        in_label = widgets['input_label']
+        # in_label = widgets['input_label']
         out_slider = widgets['output_slider']
-        out_label = widgets['output_label']
+        # out_label = widgets['output_label']
 
         # Only enable mapping and invert buttons if both parameters set
         mapping_button = widgets['mapping_button']
@@ -679,16 +701,12 @@ class ControlsFrame(ttk.Frame):
         # Disable input slider if input parameter is empty
         if not in_var.get():
             in_slider.configure(state='disabled')
-            in_slider.set_range(in_slider.from_, in_slider.to)
-            in_label.config(text=f'{int(in_slider.from_)} : {int(in_slider.to)}')
         else:
             in_slider.configure(state='normal')
 
         # Disable output slider if output parameter is empty
         if not out_var.get():
             out_slider.configure(state='disabled')
-            out_slider.set_range(out_slider.from_, out_slider.to)
-            out_label.config(text=f'{int(out_slider.from_)} : {int(out_slider.to)}')
         else:
             out_slider.configure(state='normal')
 
@@ -696,19 +714,16 @@ class ControlsFrame(ttk.Frame):
         """Toggles the parameter mapping between linear and exponential."""
         widgets = self.parameter_slider_widgets[index]
         mapping_button = widgets['mapping_button']
-        mapping_var = widgets['mapping_var']
         
         # Flip current toggle state
-        new_state = not mapping_var.get()
-        mapping_var.set(new_state)
+        new_state = not toggle_var.get()
+        toggle_var.set(new_state)
 
         # Update visual button label
         if new_state:
-            mapping_button.config(text='Exp.')
-            mapping_button.config(style='Active.TButton')
+            mapping_button.config(text='Exp.', style='Active.TButton')
         else:
-            mapping_button.config(text='Linear')
-            mapping_button.config(style='Default.TButton')
+            mapping_button.config(text='Linear', style='Default.TButton')
 
         # Flag patch changes and update parameter data
         self._sync_row_data(index)
@@ -748,73 +763,26 @@ class ControlsFrame(ttk.Frame):
         try:
             display_val = self.display_midi_channel.get()
             # Clamp to valid [1, 16] range and convert to [0, 15]
-            actual_val = max(0, min(127, display_val - 1))
+            actual_val = max(0, min(15, display_val - 1))
 
             # Prevent trace loop
             if self.active_midi_channel.get() != actual_val:
                 self.active_midi_channel.set(actual_val)
 
         except tk.TclError:
-            # User typing
-            pass
-
-    def _update_lock_state(self) -> None:
-        """Locks/unlocks all patch controls and refreshes lock button style."""
-        locked = self.lock_var.get()
-
-        if locked:
-            self.lock_button.config(style='Active.TButton', text='Unlock')
-        else:
-            self.lock_button.config(style='Default.TButton', text='Lock')
-
-        combobox_state = 'disabled' if locked else 'readonly'
-        other_state = 'disabled' if locked else 'normal'
-
-        # Scale and root note selectors
-        self.root_var_selector.config(state=combobox_state)
-        self.scale_var_selector.config(state=combobox_state)
-
-        # Recenter button
-        self.recenter_button.config(state=other_state)
-
-        # Patch action buttons
-        if locked:
-            self.save_patch_button.config(state='disabled')
-            self.reset_patch_button.config(state='disabled')
-            self.default_patch_button.config(state='disabled')
-        else:
-            self._update_patch_button_states()
-            self._update_default_patch_button()
-
-        # MIDI channel selector
-        if locked:
-            self.channel_selector.config(state='disabled')
-        else:
-            self._update_channel_selector_state()
-
-        # Per-row parameter selectors
-        for (in_var, in_sel), (out_var, out_sel) in self.parameter_selector_widgets:
-            in_sel.config(state=combobox_state)
-            out_sel.config(state=combobox_state)
-
-        # Per-row sliders and connector buttons
-        for index in range(len(self.parameter_slider_widgets)):
-            if locked:
-                widgets = self.parameter_slider_widgets[index]
-                widgets['input_slider'].configure(state='disabled')
-                widgets['output_slider'].configure(state='disabled')
-                widgets['mapping_button'].configure(state='disabled')
-                widgets['invert_button'].configure(state='disabled')
-            else:
-                self._update_slider_states(index)
-
-    def _on_lock_button(self) -> None:
-        """Flips lock button state and updates style."""
-        # Flip current toggle state
-        new_state = not self.lock_var.get()
-        self.lock_var.set(new_state)
-        self._update_lock_state()
+            pass # user typing
 
     def _on_recenter_button(self) -> None:
         """Sets current yaw reading as new user 'North'."""
         self.user_north_offset.set(self.latest_azimuth.get())
+
+    def _on_clear_all_button(self) -> None:
+        """Clears all parameters and sets sliders to max ranges."""
+        for i, ((in_var, _), (out_var, _)) in enumerate(self.parameter_selector_widgets):
+            in_var.set('')
+            out_var.set('')
+            self._sync_row_data(i)
+            self._update_slider_states(i)
+
+        self._refresh_available_types()
+        self._on_parameter_change()
