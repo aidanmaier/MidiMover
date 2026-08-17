@@ -35,9 +35,9 @@ MidiMover connects to the Android app SensorServer which exposes sensor data via
 - Python 3.10 or newer
 - A compatible Android device running the SensorServer app
 - A MIDI output available on your machine, such as:
-  - macOS: IAC Driver or a virtual MIDI bus
+  - macOS: IAC Driver Bus
   - Windows: loopMIDI or another virtual MIDI driver
-- A MIDI-compatible DAW or digital instrument
+- A MIDI-compatible DAW or digital instrument available on your machine
 - Access to the same local network as the Android device (can run on mobile hotspot)
 
 ### Run the app
@@ -48,16 +48,16 @@ python app.py
 
 The GUI will open with a connection panel and control mapping interface. From there you can configure the input device, MIDI output port, and live motion mappings.
 
-## Quick usage workflow
+## Recommended quick set-up using BandLab
 
-1. Install and start the Android SensorServer app on your device.
+1. Install and start the Android SensorServer app on your device. [https://f-droid.org/packages/github.umer0586.sensorserver/]
 2. Ensure the phone and the computer are on the same network.
-3. Launch MidiMover.
-4. In the Connections panel, select the discovered sensor service.
-5. Choose the MIDI output port you want to use.
-6. Open the Controls panel and load or edit a patch.
-7. Map motion parameters such as Tilt, Turn, Speed, or Twist to MIDI notes or CC values.
-8. Press Play to start streaming sensor data.
+3. Launch MidiMover and select SensorServer and your chosen MIDI ouput (Connections panel).
+4. Open BandLab online studio [https://help.bandlab.com/hc/en-us/articles/115002945153-Getting-Started-with-the-BandLab-Studio] and allow access to your MIDI devices (pop-up).
+5. Load a virtual instrument in the BandLab studio (recommended: Percussion > Marimba).
+6. Set IAC Driver/loopMIDI as your MIDI device in BandLab [https://help.bandlab.com/hc/en-us/articles/58150962949785-Connecting-MIDI-Devices].
+7. Try playing the virtual keyboard inside GarageBand to check your audio connection [https://help.bandlab.com/hc/en-us/articles/56922726115097-Audio-Output-Issues].
+8. Start MidiMover and try moving the controller to control the audio output.
 
 
 ## Resources
@@ -65,7 +65,8 @@ The GUI will open with a connection panel and control mapping interface. From th
 - SensorServer repository: https://github.com/UmerCodez/SensorServer
 - SensorServer app on F-Droid: https://f-droid.org/packages/github.umer0586.sensorserver/
 - Virtual MIDI bus setup guide: https://help.ableton.com/hc/en-us/articles/209774225-Setting-up-a-virtual-MIDI-bus
-- BandLab MIDI setup guide: https://help.bandlab.com/hc/en-us/articles/58150962949785-Connecting-MIDI-Devices
+- loopMIDI driver for Windows users: https://www.tobias-erichsen.de/software/loopmidi.html
+- BandLab free browser-based DAW: https://www.bandlab.com/
 
 
 ## License
