@@ -142,7 +142,7 @@
                     ],
                     "output": "Note",
                     "output_range": [
-                        19,
+                        50,
                         105
                     ],
                     "mapping": false,
@@ -375,70 +375,6 @@
                         1.0
                     ],
                     "output": "User 3",
-                    "output_range": [
-                        0,
-                        127
-                    ],
-                    "mapping": false,
-                    "invert": false
-                }
-            }
-        },
-        "For Aidan": {
-            "description": "A patch configured to Aidan's preferences.",
-            "channel": 0,
-            "root_note": 9,
-            "scale": "Mixolydian",
-            "parameters": {
-                "0": {
-                    "input": "Turn",
-                    "input_range": [
-                        -0.48,
-                        0.48
-                    ],
-                    "output": "Note",
-                    "output_range": [
-                        58,
-                        84
-                    ],
-                    "mapping": false,
-                    "invert": true
-                },
-                "1": {
-                    "input": "Tilt",
-                    "input_range": [
-                        -0.48,
-                        0.52
-                    ],
-                    "output": "Filt Cut",
-                    "output_range": [
-                        0,
-                        127
-                    ],
-                    "mapping": false,
-                    "invert": false
-                },
-                "2": {
-                    "input": "Twist",
-                    "input_range": [
-                        -1.0,
-                        1.0
-                    ],
-                    "output": "Filt Res",
-                    "output_range": [
-                        55,
-                        81
-                    ],
-                    "mapping": false,
-                    "invert": false
-                },
-                "3": {
-                    "input": null,
-                    "input_range": [
-                        -1.0,
-                        1.0
-                    ],
-                    "output": null,
                     "output_range": [
                         0,
                         127

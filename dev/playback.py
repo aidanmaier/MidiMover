@@ -8,8 +8,8 @@ path.insert(0, "../")
 from app import App
 
 INPUT_DIR = Path(__file__).resolve().parent / 'test_data'
-INPUT_FILENAME = 'test.csv'
-LOOP = True # loop playback
+INPUT_FILENAME = 'participant_mapping_demo.csv'
+LOOP = False # loop playback
 
 class DataLoader():
     def __init__(self, directory: str | Path, filename: str) -> None:

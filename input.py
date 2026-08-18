@@ -176,7 +176,7 @@ class WebsocketServiceListener(ServiceListener):
                 }
 
 class DataStreamer():
-    """Streams data from WebSocketServiceListener."""
+    """Streams data from WebSocketServiceListener in async loop."""
     def __init__(self, listener: WebsocketServiceListener) -> None:
         self.listener = listener
     

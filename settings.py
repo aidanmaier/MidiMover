@@ -202,7 +202,7 @@ class Settings:
             "default_sample_rate": self.default_sample_rate,
             "default_midi_channel": self.default_midi_channel,
             "saved_patches_list": self.saved_patches_list,
-            "default_patch": self.default_patch,
+            "default_patch": self.default_patch.get(),
             "default_device": self.default_device.get(),
             "default_outport": self.default_outport.get()
         }

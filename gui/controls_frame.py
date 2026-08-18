@@ -1,6 +1,6 @@
 import json
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from typing import Any
 from settings import Settings
 from output import midi_to_signed_pitch, snap_to_scale
@@ -653,12 +653,6 @@ class ControlsFrame(ttk.Frame):
         self.settings._save_current_settings()
         self.patch_altered.set(False)
 
-    def _on_save_as_button(self) -> None:
-        """Opens save new patch dialog window."""
-        # Save global settings
-        self.settings._save_current_settings()
-        self.patch_altered.set(False)
-
     def _on_reload_patch_button(self) -> None:
         """Reloads current patch from last save state."""
         current_patch_name = self.cleaned_loaded_patch_name.get()
@@ -786,3 +780,101 @@ class ControlsFrame(ttk.Frame):
 
         self._refresh_available_types()
         self._on_parameter_change()
+
+    def _on_save_as_button(self) -> None:
+        """Opens a dialog window to enter a new patch name and description, then saves it as a new patch."""
+        # Create top-level dialog box
+        dialog = tk.Toplevel(self)
+        dialog.title("Save Patch As")
+        dialog.resizable(False, False)
+        dialog.transient(self)  # Keep on top of main window #type: ignore
+        dialog.grab_set()  # Make window modal
+
+        # Main container frame
+        frame = ttk.Frame(dialog, padding=15)
+        frame.pack(fill="both", expand=True)
+
+        # Name input
+        ttk.Label(frame, text="Patch Name:").grid(
+            row=0, column=0, sticky="w", pady=(0, 2)
+        )
+        name_entry = ttk.Entry(frame, width=30)
+        name_entry.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 10))
+        name_entry.focus_set()
+
+        # Description input
+        ttk.Label(frame, text="Description:").grid(
+            row=2, column=0, sticky="w", pady=(0, 2)
+        )
+        desc_entry = ttk.Entry(frame, width=30)
+        desc_entry.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(0, 15))
+
+        def _save():
+            new_name = name_entry.get().strip()
+            description = desc_entry.get().strip()
+
+            if not new_name:
+                messagebox.showwarning(
+                    "Invalid Name", "Patch name cannot be empty.", parent=dialog
+                )
+                return
+
+            # Ensure root structure exists in saved_patches_data
+            patches_dict = self.settings.saved_patches_data.setdefault(
+                "patches", {}
+            )
+
+            if new_name in patches_dict:
+                if not messagebox.askyesno(
+                    "Overwrite Patch",
+                    f"A patch named '{new_name}' already exists. Overwrite?",
+                    parent=dialog,
+                ):
+                    return
+
+            # Construct new patch entry
+            patches_dict[new_name] = {
+                "description": description,
+                "parameters": self.settings.loaded_patch_parameters_data,
+                "channel": self.active_midi_channel.get(),
+                "root_note": self.active_root_note.get(),
+                "scale": self.active_scale.get(),
+            }
+
+            # Write to JSON file
+            try:
+                with open(self.settings.patches_filepath, "w") as f:
+                    json.dump(self.settings.saved_patches_data, f, indent=4)
+            except OSError as e:
+                messagebox.showerror(
+                    "Save Error",
+                    f"Failed to save patch file:\n{e}",
+                    parent=dialog,
+                )
+                return
+
+            # Update loaded patch state
+            if hasattr(self, "loaded_patch_name"):
+                self.loaded_patch_name.set(new_name)
+            if hasattr(self, "cleaned_loaded_patch_name"):
+                self.cleaned_loaded_patch_name.set(new_name)
+
+            # Save global settings and clear altered flag
+            self.settings._save_current_settings()
+            self.patch_altered.set(False)
+
+            dialog.destroy()
+
+        # Button area
+        btn_frame = ttk.Frame(frame)
+        btn_frame.grid(row=4, column=0, columnspan=2, sticky="e")
+
+        cancel_btn = ttk.Button(btn_frame, text="Cancel", command=dialog.destroy)
+        cancel_btn.pack(side="right", padx=(5, 0))
+
+        save_btn = ttk.Button(btn_frame, text="Save", command=_save)
+        save_btn.pack(side="right")
+
+        # Bind Enter key to save action
+        dialog.bind("<Return>", lambda event: _save())
+        dialog.bind("<Escape>", lambda event: dialog.destroy())

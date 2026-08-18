@@ -12,9 +12,9 @@ class Scale():
     def __init__(self, root: int, scale_type: str) -> None:
         """
         Holds MIDI note values for a given musical scale type and root note.
-        Input values:
-            root [0..11] (C..B),
-            scale_type [valid scale types held in SCALE_PATTERNS]
+        Parameters:
+        root [0..11] (C..B),
+        scale_type [valid scale types held in SCALE_PATTERNS]
         """
         self.root = root
         self.type = scale_type
@@ -178,20 +178,20 @@ class MidiOut():
 
     def note_off(self, pitch: int) -> None:
         """
-        Ends the note at the given pitch
-        Input values: pitch [0..127]
+        Ends the note at the given pitch.
+        Parameters: pitch [0..127]
         """
         msg = mido.Message('note_off', channel=self.channel, note=pitch, velocity=0)
         self._safe_send(msg)
 
     async def perc(self, pitch: int, duration: float = 0.1) -> None:
         """
-        Play asyncronous time-limited note at the given pitch
+        Sends asyncronous time-limited note at the given pitch.
         MIDI Note On message with auto Note Off message after awaiting duration
-        Input values: 
-            pitch (semitones) [0..127], 
-            velocity [0..127], 
-            duration (seconds) [any float]
+        Parameters: 
+        pitch (semitones) [0..127], 
+        velocity [0..127], 
+        duration (seconds) [any float]
         """
         self.note_on(pitch=pitch)
         await asyncio.sleep(duration)
@@ -199,10 +199,10 @@ class MidiOut():
     
     def cc(self, control: str, value: int) -> None:
         """
-        MIDI Control Change message
-        Input values: 
-            control [valid controls held in midi.CONTROL_CODES], 
-            value [0..127]
+        Sends MIDI Control Change message.
+        Parameters: 
+        control [valid controls held in midi.CONTROL_CODES], 
+        value [0..127]
         """
         control_code = self.control_codes[control]
         cc = mido.Message('control_change', channel=self.channel, control=control_code, value=value )
@@ -240,22 +240,17 @@ class MidiOut():
 def calculate_magnitude(vector: list[float]) -> float:
     """
     Calculates the magnitude of a 3-digit vector.
-
     Parameters:
     vector (list): [x, y, z]
-
-    Returns:
-    float: vector magnitude
     """
-    
     # Calculate hypotenuse from vector
     x, y, z = vector
 
     return math.hypot(x, y, z)
 
 class MidiPlayer:
+    """Maps input values based on patch data, queues processed values, and sends MIDI messages when queue is polled."""
     def __init__(self, settings: Settings, midi_out: MidiOut) -> None:
-
         # Pointers to global settings
         self.settings = settings
         self.midi_out = midi_out
