@@ -9,7 +9,6 @@ from zeroconf import ServiceListener, Zeroconf
 class WebsocketServiceListener(ServiceListener):
     """
     Initiates zero-config Websocket connection with SensorStreamer and listens for streamed sensor data. 
-    
     Parameters: 
     sensors (list of strings): list of Android sensor types to access, must contain two or more items.
     on_disconnect (callable function): cleanup function which passes disconnection cause back to the main thread.
@@ -183,7 +182,6 @@ class DataStreamer():
     async def stream(self, callback: Callable, sample_rate: int, stop_event: asyncio.Event | None = None) -> None:
         """
         Streams input data at given sample_rate data and triggers the callback function for each sample.
-
         Parameters:
         callback (Callable): callback function triggered once per sample
         sample_rate (int): sampling rate in Hz

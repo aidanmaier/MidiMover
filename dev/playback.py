@@ -64,12 +64,12 @@ class DataLoader():
             if stop_event and stop_event.is_set():
                 break
 
-            # 1. Trigger callback with current sample
+            # Trigger callback
             sample = self.get_sample(index)
             callback(sample)
             index += 1
 
-            # 2. If finished and looping, reset benchmark clock
+            # If finished and looping, reset clock
             if index >= self.samples:
                 if loop:
                     index = 0
@@ -78,7 +78,7 @@ class DataLoader():
                 else:
                     break
 
-            # 3. Calculate target sleep duration based on exact recorded timestamp difference
+            # Normalise loop length to sample period
             next_ts = self.data.index[index]
             target_elapsed = ((next_ts - start_ts) / 1_000_000_000.0) / speed_factor
             actual_elapsed = time.monotonic() - start_mono
