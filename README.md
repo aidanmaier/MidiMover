@@ -40,8 +40,6 @@ MidiMover connects to the free Android app SensorServer, which exposes sensor da
 - A MIDI-compatible DAW or digital instrument available on your machine
 - Access to the same local network as the Android device (can run on mobile hotspot)
 
-### Installation
-
 ### Run the app
 
 ```bash
